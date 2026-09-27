@@ -1,0 +1,161 @@
+@import "tailwindcss" source(none);
+@source "../src";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * ChatGhabiy — "Cyber Cyberpunk" design system.
+ * All colors are oklch semantic tokens. Never hardcode colors in components.
+ */
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 6px);
+  --radius-md: calc(var(--radius) - 4px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 6px);
+  --radius-2xl: calc(var(--radius) + 12px);
+  --radius-3xl: calc(var(--radius) + 20px);
+
+  --color-paper: var(--paper);
+  --color-cream: var(--cream);
+  --color-ink: var(--ink);
+  --color-muted-ink: var(--muted-ink);
+  --color-line: var(--line);
+  --color-butter: var(--butter);
+  --color-butter-ink: var(--butter-ink);
+  --color-coral: var(--coral);
+  --color-coral-ink: var(--coral-ink);
+  --color-teal: var(--teal);
+  --color-teal-ink: var(--teal-ink);
+  --color-coffee: var(--coffee);
+  --color-code-bg: var(--code-bg);
+  --color-code-fg: var(--code-fg);
+
+  /* shadcn compatibility */
+  --color-background: var(--paper);
+  --color-foreground: var(--ink);
+  --color-card: var(--cream);
+  --color-card-foreground: var(--ink);
+  --color-popover: var(--cream);
+  --color-popover-foreground: var(--ink);
+  --color-primary: var(--ink);
+  --color-primary-foreground: var(--cream);
+  --color-secondary: var(--butter);
+  --color-secondary-foreground: var(--butter-ink);
+  --color-muted: var(--cream);
+  --color-muted-foreground: var(--muted-ink);
+  --color-accent: var(--butter);
+  --color-accent-foreground: var(--butter-ink);
+  --color-destructive: var(--coral);
+  --color-destructive-foreground: var(--coral-ink);
+  --color-border: var(--line);
+  --color-input: var(--line);
+  --color-ring: var(--butter);
+
+  --font-display: "Cairo", ui-sans-serif, system-ui, sans-serif;
+  --font-body: "IBM Plex Sans Arabic", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+
+  --ease-notebook: cubic-bezier(0.32, 0.72, 0, 1);
+
+  --animate-rise: rise 0.5s cubic-bezier(0.32, 0.72, 0, 1) both;
+  --animate-pop: pop 0.45s cubic-bezier(0.32, 0.72, 0, 1) both;
+}
+
+:root {
+  --radius: 1rem;
+  /* ألوان عصرية دافئة: خلفيات رمادية رقمية ناعمة مع بنفسجي نيون تفاعلي مستقبلي */
+  --paper: oklch(0.965 0.004 286.0);       /* رمادي رقمي فاتح جداً وناعم للملف الخلفي */
+  --cream: oklch(0.985 0.003 286.0);       /* أوف وايت دافئ مريح جداً للصناديق الكبيرة والبطاقات */
+  --ink: oklch(0.18 0.02 286.0);           /* بنفسجي داكن جداً قريب من الأسود للنصوص الحادة */
+  --line: oklch(0.85 0.01 286.0);          /* حدود رمادية خفيفة وعصرية تفصل الواجهات بنقاء */
+  --muted-ink: oklch(0.52 0.015 286.0);    /* تدرج رمادي متوسط للنصوص الفرعية والتوقيتات */
+  --butter: oklch(0.65 0.22 295.0);        /* اللون التفاعلي الأرجواني الاحترافي (Cyber Purple) للأزرار النشطة */
+  --butter-ink: oklch(0.99 0.002 286.0);   /* لون نص أبيض ناصع يظهر بوضوح فوق الأزرار البنفسجية */
+  --coral: oklch(0.62 0.21 25.0);          /* لون أحمر مرجاني متناسق لعمليات الإلغاء والحذف */
+  --coral-ink: oklch(0.98 0.01 90);
+  --teal: oklch(0.62 0.19 240.0);          /* لون أزرق كهربائي (Electric Blue) لإشارات الاتصال والتوفر حياً */
+  --teal-ink: oklch(0.98 0.01 90);
+  --coffee: oklch(0.42 0.03 286.0);
+  --code-bg: oklch(0.18 0.02 286.0);
+  --code-fg: oklch(0.96 0.004 286.0);
+}
+
+.dark {
+  /* ألوان الوضع المظلم العصري المتناسق بالكامل */
+  --paper: oklch(0.14 0.012 286.0);
+  --cream: oklch(0.19 0.016 286.0);
+  --ink: oklch(0.96 0.004 286.0);
+  --line: oklch(0.28 0.015 286.0);
+  --muted-ink: oklch(0.68 0.012 286.0);
+  --butter: oklch(0.72 0.19 295.0);       /* أرجواني مضيء نيون يناسب الوضع المظلم الرقمي */
+  --butter-ink: oklch(0.14 0.012 286.0);
+  --coral: oklch(0.65 0.18 25.0);
+  --coral-ink: oklch(0.14 0.012 286.0);
+  --teal: oklch(0.71 0.16 240.0);
+  --teal-ink: oklch(0.14 0.012 286.0);
+  --coffee: oklch(0.65 0.012 286.0);
+  --code-bg: oklch(0.11 0.01 286.0);
+  --code-fg: oklch(0.94 0.004 286.0);
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pop {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@layer base {
+  * {
+    border-color: var(--line);
+  }
+
+  html {
+    font-family: var(--font-body);
+  }
+
+  body {
+    background-color: var(--paper);
+    color: var(--ink);
+  }
+
+  ::selection {
+    background-color: var(--butter);
+    color: var(--butter-ink);
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-thumb {
+    background-color: color-mix(in oklch, var(--ink) 22%, transparent);
+    border-radius: 999px;
+    border: 3px solid transparent;
+    background-clip: content-box;
+  }
+}
+
+@utility notebook-card {
+  border-width: 2px;
+  border-color: var(--line);
+  border-radius: var(--radius-2xl);
+  background-color: var(--cream);
+}
