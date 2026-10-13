@@ -1,0 +1,53 @@
+name: Android APK
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'android/**'
+      - '.github/workflows/android.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+
+      - name: Build APK
+        working-directory: android
+        run: |
+          set -o pipefail
+          gradle assembleRelease --no-daemon --stacktrace 2>&1 | tee build.log
+
+      # إذا فشل البناء: نطلّع سبب الخطأ كملاحظة تنقرأ من GitHub
+      - name: Report build error
+        if: failure()
+        working-directory: android
+        run: |
+          msg=$(grep -E "error:|What went wrong|e: |Could not|FAILED|failed" -A4 build.log | grep -v "^--$" | head -70 | sed -e 's/%/%25/g' -e 's/\r//g' | sed ':a;N;$!ba;s/\n/%0A/g')
+          echo "::error title=Gradle build failed::${msg}"
+
+      - name: Rename APK
+        run: cp android/app/build/outputs/apk/release/app-release.apk ghabiy.apk
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: android-v${{ github.run_number }}
+          name: تطبيق أندرويد — نسخة ${{ github.run_number }}
+          body: نزّل ملف ghabiy.apk على تلفون أندرويد ونصّبه.
+          make_latest: true
+          files: ghabiy.apk
