@@ -28,8 +28,11 @@ export function friendlyDbError(error: unknown): string {
   if (msg.includes("bad_name")) return "الاسم لازم يكون بين حرفين و40 حرف.";
   if (msg.includes("not_signed_in")) return "لازم تسجّل دخول أول.";
   if (msg.includes("unknown_inviter")) return "رابط الدعوة مو صحيح.";
+  if (msg.includes("unknown_user")) return "هذا الحساب مو موجود.";
+  if (msg.includes("not_friends") || msg.includes("accepted friendship"))
+    return "المراسلة بس ويه الأصدقاء. لازم يقبل طلب الصداقة أول.";
   if (e?.code === "PGRST202" || msg.includes("Could not find the function"))
-    return "قاعدة البيانات تحتاج تحديث (ملف friends-and-phone.sql).";
+    return "قاعدة البيانات تحتاج تحديث (ملف SQL جديد).";
   return `صار خطأ: ${msg}`;
 }
 

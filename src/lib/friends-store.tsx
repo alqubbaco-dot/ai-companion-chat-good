@@ -10,6 +10,8 @@ import {
 } from "react";
 import { readStored, writeStored } from "./storage";
 import { supabase } from "./supabase";
+import { toast } from "sonner";
+import { friendlyDbError } from "./cloud-friends";
 
 export type UserStatus = "online" | "offline";
 
@@ -109,11 +111,15 @@ export function FriendsProvider({ children }: { children: ReactNode }) {
   const [hydrated, setHydrated] = useState(false);
 
   const refreshRelations = useCallback(async (userId: string) => {
-    const { data, error } = await supabase
-      .from("friendships")
-      .select("sender_id,receiver_id,status")
-      .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`);
-
+    // علاقاتي من قاعدة البيانات عن طريق دالة آمنة (my_relations)
+    let { data, error } = await supabase.rpc("my_relations");
+    if (error) {
+      // احتياط إذا الدالة بعدها ما انضافت
+      ({ data, error } = await supabase
+        .from("friendships")
+        .select("sender_id,receiver_id,status")
+        .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`));
+    }
     if (error || !data) return;
 
     const next: Relations = { friends: [], incoming: [], outgoing: [], blocked: [] };
@@ -276,85 +282,42 @@ export function FriendsProvider({ children }: { children: ReactNode }) {
     };
   }, [fetchCloudUsers, refreshProfile, refreshRelations]);
 
-  const sendRequest = useCallback(async (id: string) => {
-    const { data } = await supabase.auth.getUser();
-    if (!data.user || data.user.id === id) return;
-    const { error } = await supabase.from("friendships").insert({
-      sender_id: data.user.id,
-      receiver_id: id,
-      status: "pending",
-    });
-    if (error) throw error;
-    await refreshRelations(data.user.id);
-  }, [refreshRelations]);
+  // كل عمليات الصداقة تمر من دالة وحدة بقاعدة البيانات (friend_action)
+  const runAction = useCallback(
+    async (id: string, action: string) => {
+      const { data } = await supabase.auth.getUser();
+      if (!data.user || data.user.id === id) return;
+      const { error } = await supabase.rpc("friend_action", { p_other: id, p_action: action });
+      if (error) throw error;
+      await refreshRelations(data.user.id);
+    },
+    [refreshRelations],
+  );
 
-  const cancelRequest = useCallback(async (id: string) => {
-    const { data } = await supabase.auth.getUser();
-    if (!data.user) return;
-    await supabase
-      .from("friendships")
-      .delete()
-      .eq("sender_id", data.user.id)
-      .eq("receiver_id", id)
-      .eq("status", "pending");
-    await refreshRelations(data.user.id);
-  }, [refreshRelations]);
+  // باقي العمليات تعرض رسالة بنفسها إذا صار خطأ
+  const quietAction = useCallback(
+    async (id: string, action: string, okMessage?: string) => {
+      try {
+        await runAction(id, action);
+        if (okMessage) toast.success(okMessage);
+      } catch (error) {
+        console.error(`تعذر تنفيذ ${action}:`, error);
+        toast.error(friendlyDbError(error));
+      }
+    },
+    [runAction],
+  );
 
-  const acceptRequest = useCallback(async (id: string) => {
-    const { data } = await supabase.auth.getUser();
-    if (!data.user) return;
-    await supabase
-      .from("friendships")
-      .update({ status: "accepted" })
-      .eq("sender_id", id)
-      .eq("receiver_id", data.user.id)
-      .eq("status", "pending");
-    await refreshRelations(data.user.id);
-  }, [refreshRelations]);
-
-  const rejectRequest = useCallback(async (id: string) => {
-    const { data } = await supabase.auth.getUser();
-    if (!data.user) return;
-    await supabase
-      .from("friendships")
-      .delete()
-      .eq("sender_id", id)
-      .eq("receiver_id", data.user.id)
-      .eq("status", "pending");
-    await refreshRelations(data.user.id);
-  }, [refreshRelations]);
-
-  const removeFriend = useCallback(async (id: string) => {
-    const { data } = await supabase.auth.getUser();
-    if (!data.user) return;
-    await supabase
-      .from("friendships")
-      .delete()
-      .or(`and(sender_id.eq.${data.user.id},receiver_id.eq.${id}),and(sender_id.eq.${id},receiver_id.eq.${data.user.id})`)
-      .eq("status", "accepted");
-    await refreshRelations(data.user.id);
-  }, [refreshRelations]);
-
-  const blockUser = useCallback(async (id: string) => {
-    const { data } = await supabase.auth.getUser();
-    if (!data.user) return;
-    await supabase
-      .from("friendships")
-      .upsert({ sender_id: data.user.id, receiver_id: id, status: "blocked" });
-    await refreshRelations(data.user.id);
-  }, [refreshRelations]);
-
-  const unblockUser = useCallback(async (id: string) => {
-    const { data } = await supabase.auth.getUser();
-    if (!data.user) return;
-    await supabase
-      .from("friendships")
-      .delete()
-      .eq("sender_id", data.user.id)
-      .eq("receiver_id", id)
-      .eq("status", "blocked");
-    await refreshRelations(data.user.id);
-  }, [refreshRelations]);
+  const sendRequest = useCallback((id: string) => runAction(id, "send"), [runAction]);
+  const cancelRequest = useCallback((id: string) => quietAction(id, "cancel"), [quietAction]);
+  const acceptRequest = useCallback(
+    (id: string) => quietAction(id, "accept", "🎉 صرتوا أصدقاء! هسه تكدرون تتراسلون"),
+    [quietAction],
+  );
+  const rejectRequest = useCallback((id: string) => quietAction(id, "reject"), [quietAction]);
+  const removeFriend = useCallback((id: string) => quietAction(id, "remove"), [quietAction]);
+  const blockUser = useCallback((id: string) => quietAction(id, "block"), [quietAction]);
+  const unblockUser = useCallback((id: string) => quietAction(id, "unblock"), [quietAction]);
 
   const byIds = useCallback(
     (ids: string[]) =>
