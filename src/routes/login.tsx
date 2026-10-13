@@ -82,7 +82,7 @@ function LoginPage() {
           // 🟢 2. قذف وحفر سجلات الحساب تلقائياً داخل جدول دليل الحسابات
           const { error: dbError } = await supabase
             .from("users_directory")
-            .insert([cloudPayload]);
+            .upsert([cloudPayload]);
 
             if (dbError) {
               toast.error(`تعذر حفظ ملف الحساب: ${dbError.message}`);

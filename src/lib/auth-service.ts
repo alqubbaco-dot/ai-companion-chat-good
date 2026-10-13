@@ -1,10 +1,10 @@
 import { supabase } from "./supabase";
 
 export const signUpWithEmail = async (email: string, password: string, username: string) => {
-  const { data, error } = await supabace.auth.signUp({ email, password });
+  const { data, error } = await supabase.auth.signUp({ email, password });
   if (error) return { error };
   if (data?.user) {
-    const generatedHandle = "@" + username.toLowerCase().replace(/\xs/g, "_");
+    const generatedHandle = "@" + username.toLowerCase().replace(/\s+/g, "_");
     const cloudPayload = {
       id: data.user.id,
       name: username,
@@ -21,5 +21,5 @@ export const signUpWithEmail = async (email: string, password: string, username:
 };
 
 export const signInWithEmail = async (email: string, password: string) => {
-  return await supabace.auth.signInWithPassword({ email, password });
+  return await supabase.auth.signInWithPassword({ email, password });
 };

@@ -181,8 +181,12 @@ export function FriendsProvider({ children }: { children: ReactNode }) {
       return;
     }
 
+    if (profileError) {
+      console.error("تعذر قراءة ملف الحساب من users_directory:", profileError);
+    }
+
     if (localProfile.id === user.id) {
-      setProfile(localProfile);
+      setProfile({ ...localProfile, phone: localProfile.phone || user.email || "" });
       return;
     }
 
@@ -194,18 +198,48 @@ export function FriendsProvider({ children }: { children: ReactNode }) {
         name: legacyProfile.name || "",
         handle: legacyProfile.handle || "",
         bio: legacyProfile.bio || "",
-        phone: legacyProfile.phone || "",
+        phone: legacyProfile.phone || user.email || "",
       };
       writeStored(key, restoredProfile);
-      const savedProfile = readStored<Profile>(key, DEFAULT_PROFILE);
-      setProfile(savedProfile.id === user.id ? savedProfile : restoredProfile);
+      setProfile(restoredProfile);
       return;
     }
 
-    setProfile(DEFAULT_PROFILE);
+    // المستخدم داخل فعلاً لكن ما عنده سجل بدليل الحسابات (حساب قديم أو فشل حفظه سابقاً):
+    // نبني له ملفاً من إيميله ونحاول نحفظه، وبكل الأحوال ندخله للتطبيق
+    const emailName = (user.email || "user").split("@")[0];
+    const fallbackProfile: Profile = {
+      id: user.id,
+      name: emailName,
+      handle: "@" + emailName.toLowerCase().replace(/[^a-z0-9_]/g, "_"),
+      bio: "",
+      phone: user.email || "",
+    };
+    if (!profileError) {
+      const { error: insertError } = await supabase.from("users_directory").upsert([
+        {
+          id: user.id,
+          name: fallbackProfile.name,
+          name_en: fallbackProfile.name,
+          handle: fallbackProfile.handle,
+          role: "مستخدم حقيقي",
+          role_en: "Real User",
+          status: "online",
+          last_seen_minutes: 0,
+          accent: "teal",
+          phone: null,
+        },
+      ]);
+      if (insertError) console.error("تعذر إنشاء سجل الحساب:", insertError);
+    }
+    writeStored(key, fallbackProfile);
+    setProfile(fallbackProfile);
   }, []);
 
   useEffect(() => {
+    // شبكة بطيئة أو مشروع Supabase متوقف يجب ألا يعلّق الواجهة للأبد
+    const safetyTimer = setTimeout(() => setHydrated(true), 8000);
+
     void supabase.auth.getUser().then(({ data }) => {
       const userId = data.user?.id;
       return Promise.all([
@@ -213,7 +247,12 @@ export function FriendsProvider({ children }: { children: ReactNode }) {
         fetchCloudUsers(),
         userId ? refreshRelations(userId) : Promise.resolve(),
       ]);
-    }).finally(() => setHydrated(true));
+    }).catch((err) => {
+      console.error("تعذر تحميل بيانات البداية:", err);
+    }).finally(() => {
+      clearTimeout(safetyTimer);
+      setHydrated(true);
+    });
 
     const channel = supabase
       .channel("schema-db-changes")
@@ -224,11 +263,15 @@ export function FriendsProvider({ children }: { children: ReactNode }) {
 
     const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user) {
-        void Promise.all([
-          refreshProfile(),
-          refreshRelations(session.user.id),
-          fetchCloudUsers(),
-        ]);
+        const userId = session.user.id;
+        // Supabase ينصح بتأجيل أي طلب داخل هذا المستمع حتى لا يتعلق نظام الدخول
+        setTimeout(() => {
+          void Promise.all([
+            refreshProfile(),
+            refreshRelations(userId),
+            fetchCloudUsers(),
+          ]);
+        }, 0);
       } else {
         setProfile(DEFAULT_PROFILE);
         setRelations(DEFAULT_RELATIONS);
@@ -236,6 +279,7 @@ export function FriendsProvider({ children }: { children: ReactNode }) {
     });
 
     return () => {
+      clearTimeout(safetyTimer);
       supabase.removeChannel(channel);
       authListener.subscription.unsubscribe();
     };
@@ -373,7 +417,7 @@ export function FriendsProvider({ children }: { children: ReactNode }) {
         if (next.id) writeStored(profileKey(next.id), next);
       },
       resetAll: () => {
-        update(DEFAULT_RELATIONS);
+        setRelations(DEFAULT_RELATIONS);
         setProfile(DEFAULT_PROFILE);
         if (profile.id) writeStored(profileKey(profile.id), DEFAULT_PROFILE);
       },

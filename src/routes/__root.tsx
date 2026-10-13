@@ -89,14 +89,14 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "twitter:card", content: "summary_large_image" },
     ],
     links: [
-      { rel: "stylesheet", href: `${appCss}?v=${Date.now()}` },
-      { rel: "preconnect", href: "https://googleapis.com" },
-      { rel: "preconnect", href: "https://gstatic.com", crossOrigin: "anonymous" },
+      { rel: "stylesheet", href: appCss },
+      { rel: "preconnect", href: "https://fonts.googleapis.com" },
+      { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       {
         rel: "stylesheet",
-        href: "https://googleapis.com",
+        href: "https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap",
       },
-      { rel: "icon", href: "data:image/svg+xml,<svg xmlns=%22http://w3.org viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>💬</text></svg>" },
+      { rel: "icon", href: "data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>💬</text></svg>" },
     ],
   }),
   shellComponent: RootShell,
@@ -125,12 +125,17 @@ function CloudSecurityGateway({ children }: { children: ReactNode }) {
   // 🟢 الحل الهندسي: قراءة المسار الحي والدقيق من نظام توجيه التطبيق مباشرة لمنع تعليق المتصفحات
   const location = useLocation();
 
-  const isRegistered = profile && profile.phone && profile.phone.trim() !== "";
+  // الحساب يُعتبر مسجّلاً إذا كان صاحبه داخلاً فعلاً عبر Supabase (عنده id)
+  const isRegistered = Boolean(profile && profile.id);
   const currentPath = location.pathname;
 
   useEffect(() => {
-    if (hydrated && !isRegistered && currentPath !== "/login") {
+    if (!hydrated) return;
+    if (!isRegistered && currentPath !== "/login") {
       router.navigate({ to: "/login" });
+    } else if (isRegistered && currentPath === "/login") {
+      // بعد نجاح الدخول انقل المستخدم لصفحة المحادثات بدل البقاء على صفحة الدخول
+      router.navigate({ to: "/" });
     }
   }, [hydrated, isRegistered, currentPath, router]);
 
