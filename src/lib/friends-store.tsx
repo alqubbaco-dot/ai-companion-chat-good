@@ -216,20 +216,11 @@ export function FriendsProvider({ children }: { children: ReactNode }) {
       phone: user.email || "",
     };
     if (!profileError) {
-      const { error: insertError } = await supabase.from("users_directory").upsert([
-        {
-          id: user.id,
-          name: fallbackProfile.name,
-          name_en: fallbackProfile.name,
-          handle: fallbackProfile.handle,
-          role: "مستخدم حقيقي",
-          role_en: "Real User",
-          status: "online",
-          last_seen_minutes: 0,
-          accent: "teal",
-          phone: null,
-        },
-      ]);
+      // ننشئ السجل عن طريق دالة قاعدة البيانات الآمنة
+      const { error: insertError } = await supabase.rpc("save_my_profile", {
+        p_name: fallbackProfile.name.length >= 2 ? fallbackProfile.name : "مستخدم جديد",
+        p_phone: null,
+      });
       if (insertError) console.error("تعذر إنشاء سجل الحساب:", insertError);
     }
     writeStored(key, fallbackProfile);
