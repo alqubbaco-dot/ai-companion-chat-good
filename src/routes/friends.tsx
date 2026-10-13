@@ -50,7 +50,6 @@ function FriendsPage() {
   const [query, setQuery] = useState("");
   const [cloudResults, setCloudResults] = useState<CloudUser[]>([]);
   const [isSearching, setIsSearching] = useState(false);
-  const [friendQuery, setFriendQuery] = useState("");
   const [summaries, setSummaries] = useState<Record<string, FriendChatSummary>>({});
   
   const {
@@ -124,7 +123,7 @@ function FriendsPage() {
 
   // ترتيب مثل الواتساب: الأحدث محادثة فوق، والباقي أبجدياً + فلترة البحث بين الأصدقاء
   const visibleFriends = useMemo(() => {
-    const q = friendQuery.trim().toLowerCase();
+    const q = query.trim().toLowerCase();
     const digits = q.replace(/\D/g, "");
     const list = friends.filter((person) => {
       if (!q) return true;
@@ -145,7 +144,13 @@ function FriendsPage() {
       const bn = lang === "ar" ? b.name : b.nameEn;
       return an.localeCompare(bn, lang === "ar" ? "ar" : "en");
     });
-  }, [friends, summaries, friendQuery, lang]);
+  }, [friends, summaries, query, lang]);
+
+  // نتائج البحث السحابي بدون الأصدقاء الموجودين (يطلعون فوق بقائمة أصدقائي)
+  const newPeople = useMemo(
+    () => cloudResults.filter((person) => relationOf(person.id) !== "friend"),
+    [cloudResults, relationOf],
+  );
 
   const handleAudioCall = (id: string, name: string) => {
     toast.info(`📞 جاري بدء الاتصال الصوتي مع ${name}... (جاهز للربط السحابي)`);
@@ -196,15 +201,56 @@ function FriendsPage() {
           {isSearching && <span className="shrink-0 text-xs text-muted-ink animate-pulse">لحظة…</span>}
         </div>
 
-        {query.trim() ? (
+        <section className="space-y-2">
+          <h2 className="font-mono text-[11px] tracking-widest text-muted-ink">
+            — {t("myFriends")} ({query.trim() ? `${visibleFriends.length}/${friends.length}` : friends.length}) —
+          </h2>
+          {friends.length === 0 ? (
+            <p className="rounded-2xl border-2 border-dashed border-line bg-cream/60 px-4 py-8 text-center text-sm text-muted-ink">
+              {t("noFriends")}
+            </p>
+          ) : visibleFriends.length === 0 ? (
+            <p className="text-sm text-muted-ink">
+              {lang === "ar" ? "ماكو صديق بهذا الاسم" : "No friend matches"}
+            </p>
+          ) : (
+            visibleFriends.map((person) => {
+              const name = lang === "ar" ? person.name : person.nameEn;
+              const summary = summaries[person.id];
+              const preview = summary
+                ? `${summary.lastSenderId === profile.id ? (lang === "ar" ? "أنت: " : "You: ") : ""}${summary.lastMessage}`
+                : undefined;
+              return (
+                <PersonRow
+                  key={person.id}
+                  person={person}
+                  lastMessage={preview}
+                  lastTime={summary ? formatChatTime(summary.lastAt, lang) : undefined}
+                  unread={summary?.unread ?? 0}
+                  showQuickActions
+                  onCall={(id) => handleAudioCall(id, name)}
+                >
+                  <RowButton tone="danger" onClick={() => removeFriend(person.id)}>
+                    {t("removeFriend")}
+                  </RowButton>
+                  <RowButton tone="danger" onClick={() => blockUser(person.id)}>
+                    {t("block")}
+                  </RowButton>
+                </PersonRow>
+              );
+            })
+          )}
+        </section>
+
+        {query.trim() && (newPeople.length > 0 || isSearching || visibleFriends.length === 0) ? (
           <section className="space-y-2">
             <h2 className="font-mono text-[11px] tracking-widest text-muted-ink">
-              — {t("results")} —
+              — {lang === "ar" ? "أشخاص جدد تكدر تضيفهم" : "People you can add"} —
             </h2>
-            {cloudResults.length === 0 && !isSearching ? (
+            {newPeople.length === 0 && !isSearching ? (
               <p className="text-sm text-muted-ink">{t("noResults")}</p>
             ) : (
-              cloudResults.map((cloudPerson) => {
+              newPeople.map((cloudPerson) => {
                 const person = {
                   id: cloudPerson.id,
                   name: cloudPerson.name,
@@ -260,66 +306,6 @@ function FriendsPage() {
             )}
           </section>
         ) : null}
-
-        <section className="space-y-2">
-          <h2 className="font-mono text-[11px] tracking-widest text-muted-ink">
-            — {t("myFriends")} ({friends.length}) —
-          </h2>
-          {friends.length > 0 ? (
-            <div className="flex items-center gap-2 rounded-2xl border-2 border-line/70 bg-cream/60 px-3 py-1.5">
-              <span className="text-sm">🔎</span>
-              <input
-                value={friendQuery}
-                onChange={(event) => setFriendQuery(event.target.value)}
-                placeholder={lang === "ar" ? "ابحث بين أصدقائك…" : "Search your friends…"}
-                className="w-full bg-transparent text-sm outline-none placeholder:text-muted-ink/70"
-              />
-              {friendQuery ? (
-                <button
-                  type="button"
-                  onClick={() => setFriendQuery("")}
-                  className="shrink-0 text-xs text-muted-ink"
-                  aria-label="مسح"
-                >
-                  ✕
-                </button>
-              ) : null}
-            </div>
-          ) : null}
-          {friends.length === 0 ? (
-            <p className="rounded-2xl border-2 border-dashed border-line bg-cream/60 px-4 py-8 text-center text-sm text-muted-ink">
-              {t("noFriends")}
-            </p>
-          ) : visibleFriends.length === 0 ? (
-            <p className="text-sm text-muted-ink">{t("noResults")}</p>
-          ) : (
-            visibleFriends.map((person) => {
-              const name = lang === "ar" ? person.name : person.nameEn;
-              const summary = summaries[person.id];
-              const preview = summary
-                ? `${summary.lastSenderId === profile.id ? (lang === "ar" ? "أنت: " : "You: ") : ""}${summary.lastMessage}`
-                : undefined;
-              return (
-                <PersonRow
-                  key={person.id}
-                  person={person}
-                  lastMessage={preview}
-                  lastTime={summary ? formatChatTime(summary.lastAt, lang) : undefined}
-                  unread={summary?.unread ?? 0}
-                  showQuickActions
-                  onCall={(id) => handleAudioCall(id, name)}
-                >
-                  <RowButton tone="danger" onClick={() => removeFriend(person.id)}>
-                    {t("removeFriend")}
-                  </RowButton>
-                  <RowButton tone="danger" onClick={() => blockUser(person.id)}>
-                    {t("block")}
-                  </RowButton>
-                </PersonRow>
-              );
-            })
-          )}
-        </section>
 
         {blocked.length > 0 ? (
           <section className="space-y-2">
