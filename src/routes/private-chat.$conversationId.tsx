@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { PageBody } from "@/components/app/AppShell";
 import { useFriends } from "@/lib/friends-store";
 import { useCall } from "@/lib/call-store";
 import {
@@ -88,60 +87,102 @@ function PrivateChatPage() {
     }
   };
 
+  const isOnline = otherUser?.status === "online";
+  const formatTime = (iso: string) =>
+    new Intl.DateTimeFormat("ar-IQ", { hour: "numeric", minute: "2-digit" }).format(new Date(iso));
+
   return (
-    <PageBody title={title} subtitle="محادثة خاصة بين صديقين">
-      <div className="mx-auto flex min-h-[60vh] w-full max-w-3xl flex-col rounded-3xl border-2 border-line bg-cream p-4">
-        <div className="mb-4 flex items-center justify-between border-b-2 border-line pb-3">
-          <span className="text-sm font-semibold">{otherUser?.handle || otherUserId}</span>
-          <div className="flex items-center gap-3">
-            {otherUserId ? (
-              <button
-                type="button"
-                onClick={() => void startCall(otherUserId, title)}
-                className="grid size-9 place-items-center rounded-full border-2 border-line bg-cream hover:bg-line/20 transition-colors cursor-pointer"
-                title="اتصال صوتي"
-                aria-label="اتصال صوتي"
-              >
-                📞
-              </button>
-            ) : null}
-            <Link to="/friends" className="text-sm text-teal">العودة للأصدقاء</Link>
+    <div className="flex h-full min-h-0 w-full flex-col bg-paper">
+      {/* شريط علوي مثل الواتساب: رجوع، الصورة والاسم، وزر الاتصال */}
+      <header className="flex shrink-0 items-center gap-3 border-b-2 border-line bg-cream px-3 py-2.5">
+        <Link
+          to="/friends"
+          className="grid size-9 shrink-0 place-items-center rounded-full text-xl hover:bg-ink/5"
+          aria-label="رجوع"
+          title="رجوع"
+        >
+          <span className="ltr:-scale-x-100">→</span>
+        </Link>
+        <div className="relative shrink-0">
+          <div className="grid size-10 place-items-center rounded-full bg-teal/20 font-display font-bold">
+            {title.charAt(0)}
           </div>
-        </div>
-
-        <div className="min-h-0 flex-1 space-y-3 overflow-y-auto py-3">
-          {loading ? <p className="text-center text-sm text-muted-ink">جاري تحميل الرسائل...</p> : null}
-          {!loading && messages.length === 0 ? (
-            <p className="text-center text-sm text-muted-ink">لا توجد رسائل بعد.</p>
+          {isOnline ? (
+            <span className="absolute -bottom-0.5 -start-0.5 size-3 rounded-full bg-emerald-500 ring-2 ring-cream" />
           ) : null}
-          {messages.map((message) => (
-            <div key={message.id} className={`flex ${message.sender_id === profile.id ? "justify-start" : "justify-end"}`}>
-              <p className="max-w-[80%] rounded-2xl border-2 border-line bg-paper px-3 py-2 text-sm">{message.content}</p>
-            </div>
-          ))}
-          <div ref={bottomRef} />
         </div>
-
-        {error ? <p className="py-2 text-sm text-coral">{error}</p> : null}
-        <div className="mt-3 flex gap-2 border-t-2 border-line pt-3">
-          <textarea
-            value={draft}
-            onChange={(event) => setDraft(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === "Enter" && !event.shiftKey) {
-                event.preventDefault();
-                void submit();
-              }
-            }}
-            disabled={sending || loading}
-            placeholder="اكتب رسالة خاصة..."
-            className="min-h-11 flex-1 resize-none rounded-2xl border-2 border-line bg-paper px-3 py-2 text-sm outline-none"
-          />
-          <button type="button" onClick={() => void submit()} disabled={sending || loading || !draft.trim()} className="rounded-2xl bg-ink px-4 text-cream disabled:opacity-40">
-            إرسال
+        <div className="min-w-0 flex-1">
+          <p className="truncate font-display text-[15px] font-extrabold leading-tight">{title}</p>
+          <p className={`truncate text-[11px] ${isOnline ? "text-emerald-600" : "text-muted-ink"}`}>
+            {isOnline ? "متصل الآن" : otherUser?.handle || ""}
+          </p>
+        </div>
+        {otherUserId ? (
+          <button
+            type="button"
+            onClick={() => void startCall(otherUserId, title)}
+            className="grid size-10 shrink-0 place-items-center rounded-full bg-emerald-500 text-lg text-white shadow-sm transition-transform active:scale-95"
+            title="اتصال صوتي"
+            aria-label="اتصال صوتي"
+          >
+            📞
           </button>
-        </div>
+        ) : null}
+      </header>
+
+      {/* الرسائل */}
+      <div className="min-h-0 flex-1 space-y-2 overflow-y-auto px-3 py-4">
+        {loading ? <p className="text-center text-sm text-muted-ink">جاري تحميل الرسائل...</p> : null}
+        {!loading && messages.length === 0 ? (
+          <p className="text-center text-sm text-muted-ink">لا توجد رسائل بعد. سلّم على صديقك 👋</p>
+        ) : null}
+        {messages.map((message) => {
+          const mine = message.sender_id === profile.id;
+          return (
+            <div key={message.id} className={`flex ${mine ? "justify-start" : "justify-end"}`}>
+              <div
+                className={`max-w-[80%] rounded-2xl px-3 py-1.5 text-sm shadow-sm ${
+                  mine ? "rounded-ss-sm bg-emerald-100 text-emerald-950" : "rounded-se-sm border border-line bg-cream"
+                }`}
+              >
+                <p className="whitespace-pre-wrap break-words">{message.content}</p>
+                <p className="mt-0.5 text-end text-[10px] opacity-60">{formatTime(message.created_at)}</p>
+              </div>
+            </div>
+          );
+        })}
+        <div ref={bottomRef} />
       </div>
-    </PageBody>
+
+      {error ? <p className="px-3 py-1 text-sm text-coral">{error}</p> : null}
+
+      {/* مربع الكتابة */}
+      <div className="flex shrink-0 items-end gap-2 border-t-2 border-line bg-cream px-3 py-2">
+        <textarea
+          value={draft}
+          onChange={(event) => setDraft(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" && !event.shiftKey) {
+              event.preventDefault();
+              void submit();
+            }
+          }}
+          rows={1}
+          disabled={sending || loading}
+          placeholder="اكتب رسالة..."
+          className="max-h-32 min-h-11 flex-1 resize-none rounded-3xl border-2 border-line bg-paper px-4 py-2.5 text-sm outline-none"
+        />
+        <button
+          type="button"
+          onClick={() => void submit()}
+          disabled={sending || loading || !draft.trim()}
+          className="grid size-11 shrink-0 place-items-center rounded-full bg-emerald-500 text-lg text-white disabled:opacity-40"
+          aria-label="إرسال"
+          title="إرسال"
+        >
+          <span className="rtl:-scale-x-100">➤</span>
+        </button>
+      </div>
+    </div>
   );
-}
+}
