@@ -18,9 +18,9 @@ export function streamSimulatedReply(
   const runCall = async () => {
     try {
       // الطلب يروح لسيرفر التطبيق، وهو اللي يحچي ويه Gemini (المفتاح يبقى مخفي)
-      // إذا السيرفر ما رد خلال 35 ثانية نعتبره نايم، حتى المحادثة ما تبقى معلّكة
+      // إذا السيرفر ما رد خلال 40 ثانية نعتبره نايم، حتى المحادثة ما تبقى معلّكة
       const timeout = new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error("client timeout")), 35_000),
+        setTimeout(() => reject(new Error("client timeout")), 40_000),
       );
       const result = await Promise.race([
         askGemini({ data: { prompt, lang, isFunny } }),
