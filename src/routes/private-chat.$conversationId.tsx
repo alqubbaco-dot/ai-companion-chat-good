@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useFriends } from "@/lib/friends-store";
 import { useCall } from "@/lib/call-store";
+import { notifyFriend } from "@/lib/push-client";
 import {
   getPrivateConversation,
   getPrivateMessages,
@@ -80,6 +81,17 @@ function PrivateChatPage() {
       const message = await sendPrivateMessage(conversationId, draft);
       setMessages((current) => current.some((item) => item.id === message.id) ? current : [...current, message]);
       setDraft("");
+      // إشعار لصديقك إذا جان التطبيق مسكّر عنده
+      if (otherUserId) {
+        void notifyFriend(
+          otherUserId,
+          "message",
+          `💬 ${profile.name || "رسالة جديدة"}`,
+          message.content.length > 120 ? `${message.content.slice(0, 120)}…` : message.content,
+          `/private-chat/${conversationId}`,
+          `msg-${conversationId}`,
+        );
+      }
     } catch (sendError) {
       setError(sendError instanceof Error ? sendError.message : "تعذر إرسال الرسالة");
     } finally {

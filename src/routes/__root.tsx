@@ -22,6 +22,7 @@ import { PwaManager } from "@/components/app/PwaManager";
 import { InviteHandler } from "@/components/app/InviteHandler";
 import { CallProvider } from "@/lib/call-store";
 import { CallOverlay } from "@/components/app/CallOverlay";
+import { PushPrompt } from "@/components/app/PushPrompt";
 
 function NotFoundComponent() {
   return (
@@ -196,6 +197,7 @@ function RootComponent() {
               <PwaManager />
               <InviteHandler />
               <CallOverlay />
+              <PushPrompt />
               </CallProvider>
             </ChatProvider>
           </FriendsProvider>

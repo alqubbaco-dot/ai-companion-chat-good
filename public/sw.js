@@ -4,7 +4,7 @@
 // - الملفات الثابتة (JS/CSS/صور): من الذاكرة فوراً، وتتحدّث بالخلفية
 // - ما يلمس طلبات السيرفر ولا Supabase ولا Gemini
 
-const VERSION = "v1";
+const VERSION = "v2";
 const CORE_CACHE = `ghabiy-core-${VERSION}`;
 const STATIC_CACHE = `ghabiy-static-${VERSION}`;
 const OFFLINE_URL = "/offline.html";
@@ -85,4 +85,80 @@ self.addEventListener("fetch", (event) => {
       })(),
     );
   }
+});
+
+
+// ───────────── إشعارات Push: المكالمات والرسائل والتطبيق مسكّر ─────────────
+
+const NOTIFY_ICON = "/icons/icon-192.png";
+const NOTIFY_BADGE = "/icons/favicon-48.png";
+
+self.addEventListener("push", (event) => {
+  let data = {};
+  try {
+    data = event.data ? event.data.json() : {};
+  } catch {
+    data = { title: "الغباء الصناعي", body: event.data ? event.data.text() : "" };
+  }
+
+  event.waitUntil(
+    (async () => {
+      const windows = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+      const appVisible = windows.some((c) => c.visibilityState === "visible");
+
+      // المتصل سكّر الخط: نشيل إشعار الرنين ونخليه "مكالمة فائتة"
+      if (data.kind === "call-end") {
+        const ringing = await self.registration.getNotifications({ tag: data.tag });
+        ringing.forEach((n) => n.close());
+        if (ringing.length > 0 && !appVisible) {
+          await self.registration.showNotification(data.title || "مكالمة فائتة", {
+            body: data.body || "",
+            tag: `${data.tag}-missed`,
+            icon: NOTIFY_ICON,
+            badge: NOTIFY_BADGE,
+            data: { url: data.url || "/friends" },
+          });
+        }
+        return;
+      }
+
+      // التطبيق مفتوح وظاهر: هو يتكفل بالرنين والرسائل
+      if (appVisible) return;
+
+      const isCall = data.kind === "call";
+      await self.registration.showNotification(data.title || "الغباء الصناعي", {
+        body: data.body || "",
+        tag: data.tag || undefined,
+        renotify: true,
+        requireInteraction: isCall,
+        vibrate: isCall ? [600, 300, 600, 300, 600, 300, 600, 300, 600] : [200, 100, 200],
+        icon: NOTIFY_ICON,
+        badge: NOTIFY_BADGE,
+        data: { url: data.url || "/" },
+      });
+    })(),
+  );
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const target = new URL((event.notification.data && event.notification.data.url) || "/", self.location.origin).href;
+
+  event.waitUntil(
+    (async () => {
+      const windows = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+      for (const client of windows) {
+        if (new URL(client.url).origin === self.location.origin) {
+          try {
+            await client.focus();
+            if ("navigate" in client) await client.navigate(target);
+            return;
+          } catch {
+            /* نفتح نافذة جديدة تحت */
+          }
+        }
+      }
+      await self.clients.openWindow(target);
+    })(),
+  );
 });

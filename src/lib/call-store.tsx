@@ -13,6 +13,7 @@ import type { RealtimeChannel } from "@supabase/supabase-js";
 import { toast } from "sonner";
 import { supabase } from "./supabase";
 import { useFriends } from "./friends-store";
+import { notifyFriend } from "./push-client";
 
 /*
  * الاتصال الصوتي بين الأصدقاء (WebRTC)
@@ -44,7 +45,9 @@ type Signal =
   | { type: "answer"; callId: string; from: string; sdp: RTCSessionDescriptionInit }
   | { type: "ice"; callId: string; from: string; candidate: RTCIceCandidateInit }
   | { type: "reject"; callId: string; from: string; reason?: "busy" | "declined" }
-  | { type: "hangup"; callId: string; from: string };
+  | { type: "hangup"; callId: string; from: string }
+  // المستلم فتح التطبيق من الإشعار وصار جاهز يستلم الدعوة
+  | { type: "ready"; callId: string; from: string };
 
 type CallValue = {
   phase: CallPhase;
@@ -166,6 +169,7 @@ export function CallProvider({ children }: { children: ReactNode }) {
   const pendingOfferRef = useRef<RTCSessionDescriptionInit | null>(null);
   const pendingIceRef = useRef<RTCIceCandidateInit[]>([]);
   const peerChannelRef = useRef<RealtimeChannel | null>(null);
+  const peerChannelPeerRef = useRef<string | null>(null);
   const ringerRef = useRef<ReturnType<typeof createRinger> | null>(null);
   const ringTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const relationOfRef = useRef(relationOf);
@@ -180,6 +184,10 @@ export function CallProvider({ children }: { children: ReactNode }) {
 
   // ── قناة الطرف الثاني (نرسل عليها الإشارات) ──
   const openPeerChannel = useCallback(async (peerId: string) => {
+    // القناة مفتوحة أصلاً لنفس الشخص: نستعملها
+    if (peerChannelRef.current && peerChannelPeerRef.current === peerId) {
+      return peerChannelRef.current;
+    }
     if (peerChannelRef.current) {
       void supabase.removeChannel(peerChannelRef.current);
       peerChannelRef.current = null;
@@ -200,6 +208,7 @@ export function CallProvider({ children }: { children: ReactNode }) {
       });
     });
     peerChannelRef.current = channel;
+    peerChannelPeerRef.current = peerId;
     return channel;
   }, []);
 
@@ -227,6 +236,7 @@ export function CallProvider({ children }: { children: ReactNode }) {
         void supabase.removeChannel(peerChannelRef.current);
         peerChannelRef.current = null;
       }
+      peerChannelPeerRef.current = null;
       setMuted(false);
       setEndedReason(reason);
       if (callRef.current) {
@@ -317,6 +327,22 @@ export function CallProvider({ children }: { children: ReactNode }) {
     return stream;
   }, []);
 
+  // إشعار "مكالمة فائتة" يشيل إشعار الرنين من تلفون الصديق
+  const notifyMissed = useCallback(
+    (info: CallInfo) => {
+      if (info.direction !== "out") return;
+      void notifyFriend(
+        info.peerId,
+        "call-end",
+        "📵 مكالمة فائتة",
+        `من ${profile.name || "صديق"}`,
+        "/friends",
+        `call-${info.callId}`,
+      );
+    },
+    [profile.name],
+  );
+
   // ── بدء مكالمة ──
   const startCall = useCallback(
     async (peerId: string, peerName: string) => {
@@ -349,11 +375,22 @@ export function CallProvider({ children }: { children: ReactNode }) {
           fromName: profile.name || "صديق",
           sdp: { type: offer.type, sdp: offer.sdp },
         });
+        // إشعار Push حتى يرن تلفونه لو التطبيق مسكّر
+        const myName = profile.name || "صديق";
+        void notifyFriend(
+          peerId,
+          "call",
+          `📞 مكالمة من ${myName}`,
+          "اضغط حتى ترد على المكالمة",
+          `/friends?call=${encodeURIComponent(info.callId)}&from=${encodeURIComponent(myId)}`,
+          `call-${info.callId}`,
+        );
         ringerRef.current = createRinger("outgoing");
         ringerRef.current.start();
         ringTimeoutRef.current = setTimeout(() => {
           if (phaseRef.current === "outgoing") {
             void sendSignal({ type: "hangup", callId: info.callId, from: myId });
+            notifyMissed(info);
             cleanup("ما رد");
           }
         }, RING_TIMEOUT_MS);
@@ -367,7 +404,7 @@ export function CallProvider({ children }: { children: ReactNode }) {
         );
       }
     },
-    [cleanup, createPeer, getMic, myId, openPeerChannel, profile.name, sendSignal, updatePhase],
+    [cleanup, createPeer, getMic, myId, notifyMissed, openPeerChannel, profile.name, sendSignal, updatePhase],
   );
 
   // ── الرد على مكالمة واردة ──
@@ -417,8 +454,9 @@ export function CallProvider({ children }: { children: ReactNode }) {
     const info = callRef.current;
     if (!info) return;
     void sendSignal({ type: "hangup", callId: info.callId, from: myId });
+    if (phaseRef.current === "outgoing") notifyMissed(info);
     cleanup("انتهت المكالمة");
-  }, [cleanup, myId, sendSignal]);
+  }, [cleanup, myId, notifyMissed, sendSignal]);
 
   const toggleMute = useCallback(() => {
     const stream = localStreamRef.current;
@@ -528,6 +566,21 @@ export function CallProvider({ children }: { children: ReactNode }) {
         return;
       }
 
+      if (signal.type === "ready") {
+        // صديقك فتح التطبيق من الإشعار: نعيد إرسال الدعوة (فيها كل عناوين الشبكة)
+        const pc = pcRef.current;
+        if (phaseRef.current === "outgoing" && pc?.localDescription) {
+          await sendSignal({
+            type: "invite",
+            callId: current.callId,
+            from: myId,
+            fromName: profile.name || "صديق",
+            sdp: { type: pc.localDescription.type, sdp: pc.localDescription.sdp },
+          });
+        }
+        return;
+      }
+
       if (signal.type === "reject") {
         cleanup(signal.reason === "busy" ? "الخط مشغول" : "رفض المكالمة");
         return;
@@ -543,12 +596,36 @@ export function CallProvider({ children }: { children: ReactNode }) {
       .on("broadcast", { event: "signal" }, ({ payload }) => {
         void handleSignal(payload as Signal);
       })
-      .subscribe();
+      .subscribe((status) => {
+        if (status !== "SUBSCRIBED") return;
+        // فتح التطبيق من إشعار مكالمة؟ نبلغ المتصل حتى يعيد إرسال الدعوة
+        try {
+          const params = new URLSearchParams(window.location.search);
+          const callId = params.get("call");
+          const from = params.get("from");
+          if (callId && from && from !== myId) {
+            params.delete("call");
+            params.delete("from");
+            const rest = params.toString();
+            window.history.replaceState(null, "", window.location.pathname + (rest ? `?${rest}` : ""));
+            void (async () => {
+              try {
+                await openPeerChannel(from);
+                await sendSignal({ type: "ready", callId, from: myId });
+              } catch (err) {
+                console.warn("ready signal failed", err);
+              }
+            })();
+          }
+        } catch (err) {
+          console.warn("ready signal failed", err);
+        }
+      });
 
     return () => {
       void supabase.removeChannel(inbox);
     };
-  }, [cleanup, flushPendingIce, myId, openPeerChannel, updatePhase]);
+  }, [cleanup, flushPendingIce, myId, openPeerChannel, profile.name, sendSignal, updatePhase]);
 
   // عدّاد وقت المكالمة
   useEffect(() => {
