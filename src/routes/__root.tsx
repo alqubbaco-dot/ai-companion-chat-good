@@ -79,8 +79,13 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   head: () => ({
     meta: [
       { charSet: "utf-8" },
-      { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "الغباء الصناعي — ChatGhabiy" },
+      { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
+      { name: "theme-color", content: "#14106f" },
+      { name: "mobile-web-app-capable", content: "yes" },
+      { name: "apple-mobile-web-app-capable", content: "yes" },
+      { name: "apple-mobile-web-app-title", content: "الغباء الصناعي" },
+      { name: "apple-mobile-web-app-status-bar-style", content: "default" },
+      { title: "الغباء الصناعي" },
       {
         name: "description",
         content: "مساعد دردشة ذكي مع نظام أصدقاء، بالعربية والإنجليزية، فاتح وداكن.",
@@ -96,7 +101,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         rel: "stylesheet",
         href: "https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap",
       },
-      { rel: "icon", href: "data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>💬</text></svg>" },
+      { rel: "icon", type: "image/png", sizes: "32x32", href: "/icons/favicon-32.png" },
+      { rel: "icon", type: "image/png", sizes: "48x48", href: "/icons/favicon-48.png" },
+      { rel: "apple-touch-icon", sizes: "180x180", href: "/icons/apple-touch-icon.png" },
+      { rel: "manifest", href: "/manifest.webmanifest" },
     ],
   }),
   shellComponent: RootShell,
@@ -142,8 +150,16 @@ function CloudSecurityGateway({ children }: { children: ReactNode }) {
   // انتظر حتى يتم تحميل الذاكرة بشكل كامل وصحيح أولاً من المتجر
   if (!hydrated) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-paper">
-        <div className="text-center font-display font-bold text-ink animate-pulse">جاري معاينة الأكواد...</div>
+      <div className="flex min-h-dvh flex-col items-center justify-center gap-3 bg-paper">
+        <img
+          src="/icons/logo.webp"
+          alt="الغباء الصناعي"
+          width={80}
+          height={80}
+          className="size-20 animate-pulse rounded-[30%] shadow-lg"
+          draggable={false}
+        />
+        <div className="font-display text-sm font-bold text-muted-ink">لحظة…</div>
       </div>
     );
   }

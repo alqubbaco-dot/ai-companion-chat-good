@@ -29,17 +29,17 @@ function LoginPage() {
     const cleanPassword = password.trim();
 
     if (mode === "signup" && !cleanName) {
-      toast.error("يرجى كتابة الاسم الكريم لإنشاء الحساب الجديد.");
+      toast.error("اكتب اسمك حتى نسوّيلك الحساب.");
       return;
     }
 
     if (!cleanEmail) {
-      toast.error("يرجى كتابة البريد الإلكتروني الحقيقي للعبور.");
+      toast.error("اكتب إيميلك.");
       return;
     }
 
     if (!cleanPassword || cleanPassword.length < 6) {
-      toast.error("تأمين الحساب حرج؛ كلمة المرور يجب ألا تقل عن 6 أحرف.");
+      toast.error("كلمة السر لازم تكون 6 أحرف أو أكثر.");
       return;
     }
 
@@ -57,7 +57,7 @@ function LoginPage() {
         });
 
         if (authError) {
-          toast.error(`فشلت مصادقة سوبابيز: ${authError.message}`);
+          toast.error(`ما گدرنا نسوّي الحساب: ${authError.message}`);
           setIsSubmitting(false);
           return;
         }
@@ -85,7 +85,7 @@ function LoginPage() {
             .upsert([cloudPayload]);
 
             if (dbError) {
-              toast.error(`تعذر حفظ ملف الحساب: ${dbError.message}`);
+              toast.error(`ما گدرنا نحفظ الحساب: ${dbError.message}`);
               setIsSubmitting(false);
               return;
             }
@@ -98,7 +98,7 @@ function LoginPage() {
         });
 
         if (signInError) {
-          toast.error(`خطأ في تسجيل الدخول: ${signInError.message}`);
+          toast.error(`الإيميل أو كلمة السر غلط: ${signInError.message}`);
           setIsSubmitting(false);
           return;
         }
@@ -107,7 +107,7 @@ function LoginPage() {
       }
 
       if (!authUserId) {
-        toast.error("تعذر تحديد هوية الحساب الحالي.");
+        toast.error("صار خلل بالدخول، جرّب مرة ثانية.");
         setIsSubmitting(false);
         return;
       }
@@ -115,53 +115,61 @@ function LoginPage() {
       await refreshProfile();
       
       if (mode === "signup") {
-        toast.success(`🟢 تم إنشاء الهوية وتفعيل الدخول بالإيميل بنجاح.`);
+        toast.success(`🎉 أهلاً بيك! حسابك صار جاهز.`);
       } else {
-        toast.success(`🔐 أهلاً بك مجدداً! تم تسجيل دخولك بأمان.`);
+        toast.success(`👋 هلا بيك من جديد!`);
       }
       
       router.navigate({ to: "/" });
 
     } catch (err: unknown) {
       console.error("خطأ أثناء معالجة الهوية السحابية والمحلية:", err);
-      toast.error("تعذر تحميل بيانات الحساب الحالي.");
+      toast.error("صار خلل بالدخول، جرّب مرة ثانية.");
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-paper px-4 py-4 sm:py-8">
-      <div className="w-full max-w-md space-y-3.5 rounded-3xl border-2 border-line bg-cream p-5 sm:p-8 shadow-xl animate-rise">
+    <div className="flex min-h-dvh items-center justify-center bg-paper bg-[radial-gradient(ellipse_at_top,color-mix(in_oklch,var(--brand-to)_30%,transparent)_0%,transparent_60%)] px-4 py-4 sm:py-8">
+      <div className="w-full max-w-md space-y-4 rounded-3xl border border-line bg-cream/95 p-5 sm:p-8 shadow-xl backdrop-blur animate-rise">
         
         <div className="text-center">
-          <div className="mx-auto grid size-12 place-items-center rounded-full bg-ink text-2xl">💬</div>
+          <img
+            src="/icons/logo.webp"
+            alt="الغباء الصناعي"
+            width={80}
+            height={80}
+            className="mx-auto size-20 rounded-[30%] shadow-lg"
+            draggable={false}
+          />
+          <p className="mt-2 font-display text-sm font-bold text-butter">الغباء الصناعي</p>
           <h2 className="mt-2 font-display text-xl font-extrabold tracking-tight text-ink">
-            {mode === "signup" ? "إنشاء هوية رقمية" : "تسجيل دخول الحساب"}
+            {mode === "signup" ? "حساب جديد" : "تسجيل الدخول"}
           </h2>
           <p className="mt-1 text-[11px] font-semibold text-muted-ink">
-            {mode === "signup" ? "سجل بريدك الإلكتروني لصب البيانات" : "أدخل بريدك والرمز للعبور الفوري لغرف المراسلة"}
+            {mode === "signup" ? "سوّي حسابك وابدأ السوالف ويه الغباء الصناعي" : "دخّل إيميلك وكلمة السر وارجع لسوالفك"}
           </p>
         </div>
 
-        <div className="grid grid-cols-2 gap-2 rounded-2xl border-2 border-line bg-paper p-1">
+        <div className="grid grid-cols-2 gap-1 rounded-full border border-line bg-paper p-1">
           <button
             type="button"
             onClick={() => setMode("signup")}
-            className={`rounded-xl py-1.5 text-xs font-bold transition-all cursor-pointer text-center ${
-              mode === "signup" ? "bg-teal text-teal-ink border-2 border-line/40 shadow-sm" : "text-muted-ink hover:text-ink"
+            className={`rounded-full py-1.5 text-xs font-bold transition-all cursor-pointer text-center ${
+              mode === "signup" ? "bg-brand shadow-sm" : "text-muted-ink hover:text-ink"
             }`}
           >
-            👤 مستخدم جديد
+            حساب جديد
           </button>
           <button
             type="button"
             onClick={() => setMode("signin")}
-            className={`rounded-xl py-1.5 text-xs font-bold transition-all cursor-pointer text-center ${
-              mode === "signin" ? "bg-teal text-teal-ink border-2 border-line/40 shadow-sm" : "text-muted-ink hover:text-ink"
+            className={`rounded-full py-1.5 text-xs font-bold transition-all cursor-pointer text-center ${
+              mode === "signin" ? "bg-brand shadow-sm" : "text-muted-ink hover:text-ink"
             }`}
           >
-            🔐 مسجل قديم
+            عندي حساب
           </button>
         </div>
         
@@ -169,42 +177,42 @@ function LoginPage() {
           
           {mode === "signup" && (
             <div className="space-y-1 animate-fade-in">
-              <label className="text-xs font-bold text-ink">الاسم الثلاثي الكريم:</label>
+              <label className="text-xs font-bold text-ink">اسمك</label>
               <input
                 type="text"
                 required
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="مثال: الاسم الثلاثي"
-                className="w-full rounded-xl border-2 border-line bg-paper px-3 py-1.5 text-sm outline-none focus:border-teal"
+                placeholder="مثلاً: علي حسن"
+                className="w-full rounded-xl border border-line bg-paper px-3 py-2 text-sm outline-none focus:border-butter"
               />
             </div>
           )}
 
           {/* 🟢 تحويل وتطهير حقل الهاتف بالكامل إلى حقل البريد الإلكتروني القياسي الشرعي */}
           <div className="space-y-1">
-            <label className="text-xs font-bold text-ink">البريد الإلكتروني (Email):</label>
+            <label className="text-xs font-bold text-ink">الإيميل</label>
             <input
               type="email"
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="you@example.com"
-              className="w-full rounded-xl border-2 border-line bg-paper px-3 py-1.5 text-sm outline-none focus:border-teal text-left"
+              className="w-full rounded-xl border border-line bg-paper px-3 py-2 text-sm outline-none focus:border-butter text-left"
               dir="ltr"
               autoComplete="email"
             />
           </div>
 
           <div className="space-y-1">
-            <label className="text-xs font-bold text-ink">كلمة المرور (Password):</label>
+            <label className="text-xs font-bold text-ink">كلمة السر</label>
             <input
               type="password"
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
-              className="w-full rounded-xl border-2 border-line bg-paper px-3 py-1.5 text-sm outline-none focus:border-teal text-left"
+              className="w-full rounded-xl border border-line bg-paper px-3 py-2 text-sm outline-none focus:border-butter text-left"
               dir="ltr"
               autoComplete="current-password"
             />
@@ -220,21 +228,22 @@ function LoginPage() {
                 className="mt-0.5 rounded border-line accent-teal"
               />
               <label htmlFor="agree" className="text-[10px] font-semibold text-muted-ink leading-tight select-none">
-                أوافق على اتفاقية الاستخدام وسياسات حفظ الهوية السحابية المحمية.
+                أوافق على شروط الاستخدام وسياسة الخصوصية.
               </label>
             </div>
           )}
 
           <button
             type="submit"
-            className="mt-2 w-full rounded-full border-2 border-line bg-teal py-2 text-sm font-bold text-teal-ink hover:bg-teal/90 transition-colors shadow-md cursor-pointer text-center flex items-center justify-center gap-1.5"
+            disabled={isSubmitting}
+            className="bg-brand mt-2 w-full rounded-full py-2.5 text-sm font-bold shadow-md transition-transform hover:scale-[1.01] disabled:opacity-60 cursor-pointer text-center flex items-center justify-center gap-1.5"
           >
             {isSubmitting ? (
-              "جاري تفعيل الهوية..."
+              "لحظة…"
             ) : mode === "signup" ? (
-              <>🚀 إنشاء وتفعيل الحساب</>
+              <>🚀 سوّي الحساب</>
             ) : (
-              <>🔐 تسجيل دخول الحساب</>
+              <>دخول</>
             )}
           </button>
         </form>
