@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { PageBody } from "@/components/app/AppShell";
 import { PersonRow, RowButton } from "@/components/friends/PersonRow";
 import { useFriends } from "@/lib/friends-store";
+import { useCall } from "@/lib/call-store";
 import { useI18n } from "@/lib/i18n";
 import { friendlyDbError, searchCloudUsers, shareInvite, type CloudUser } from "@/lib/cloud-friends";
 import {
@@ -152,8 +153,9 @@ function FriendsPage() {
     [cloudResults, relationOf],
   );
 
+  const { startCall } = useCall();
   const handleAudioCall = (id: string, name: string) => {
-    toast.info(`📞 جاري بدء الاتصال الصوتي مع ${name}... (جاهز للربط السحابي)`);
+    void startCall(id, name);
   };
 
   const handleSendCloudRequest = async (targetId: string, targetName: string) => {

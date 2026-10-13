@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { PageBody } from "@/components/app/AppShell";
 import { useFriends } from "@/lib/friends-store";
+import { useCall } from "@/lib/call-store";
 import {
   getPrivateConversation,
   getPrivateMessages,
@@ -19,6 +20,7 @@ export const Route = createFileRoute("/private-chat/$conversationId")({
 function PrivateChatPage() {
   const { conversationId } = Route.useParams();
   const { directory, profile } = useFriends();
+  const { startCall } = useCall();
   const [messages, setMessages] = useState<PrivateMessage[]>([]);
   const [otherUserId, setOtherUserId] = useState("");
   const [draft, setDraft] = useState("");
@@ -91,7 +93,20 @@ function PrivateChatPage() {
       <div className="mx-auto flex min-h-[60vh] w-full max-w-3xl flex-col rounded-3xl border-2 border-line bg-cream p-4">
         <div className="mb-4 flex items-center justify-between border-b-2 border-line pb-3">
           <span className="text-sm font-semibold">{otherUser?.handle || otherUserId}</span>
-          <Link to="/friends" className="text-sm text-teal">العودة للأصدقاء</Link>
+          <div className="flex items-center gap-3">
+            {otherUserId ? (
+              <button
+                type="button"
+                onClick={() => void startCall(otherUserId, title)}
+                className="grid size-9 place-items-center rounded-full border-2 border-line bg-cream hover:bg-line/20 transition-colors cursor-pointer"
+                title="اتصال صوتي"
+                aria-label="اتصال صوتي"
+              >
+                📞
+              </button>
+            ) : null}
+            <Link to="/friends" className="text-sm text-teal">العودة للأصدقاء</Link>
+          </div>
         </div>
 
         <div className="min-h-0 flex-1 space-y-3 overflow-y-auto py-3">

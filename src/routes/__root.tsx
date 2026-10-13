@@ -20,6 +20,8 @@ import { AppShell } from "@/components/app/AppShell";
 import { Toaster } from "@/components/ui/sonner";
 import { PwaManager } from "@/components/app/PwaManager";
 import { InviteHandler } from "@/components/app/InviteHandler";
+import { CallProvider } from "@/lib/call-store";
+import { CallOverlay } from "@/components/app/CallOverlay";
 
 function NotFoundComponent() {
   return (
@@ -184,6 +186,7 @@ function RootComponent() {
         <ThemeProvider>
           <FriendsProvider>
             <ChatProvider>
+              <CallProvider>
               <CloudSecurityGateway>
                 <AppShell>
                   <Outlet />
@@ -192,6 +195,8 @@ function RootComponent() {
               <Toaster position="top-center" />
               <PwaManager />
               <InviteHandler />
+              <CallOverlay />
+              </CallProvider>
             </ChatProvider>
           </FriendsProvider>
         </ThemeProvider>
