@@ -18,6 +18,7 @@ import { FriendsProvider, useFriends } from "@/lib/friends-store";
 import { ChatProvider } from "@/lib/chat-store";
 import { AppShell } from "@/components/app/AppShell";
 import { Toaster } from "@/components/ui/sonner";
+import { PwaManager } from "@/components/app/PwaManager";
 
 function NotFoundComponent() {
   return (
@@ -188,6 +189,7 @@ function RootComponent() {
                 </AppShell>
               </CloudSecurityGateway>
               <Toaster position="top-center" />
+              <PwaManager />
             </ChatProvider>
           </FriendsProvider>
         </ThemeProvider>
