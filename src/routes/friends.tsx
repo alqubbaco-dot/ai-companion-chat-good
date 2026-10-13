@@ -5,7 +5,7 @@ import { PageBody } from "@/components/app/AppShell";
 import { PersonRow, RowButton } from "@/components/friends/PersonRow";
 import { useFriends } from "@/lib/friends-store";
 import { useI18n } from "@/lib/i18n";
-import { searchCloudUsers, shareInvite, type CloudUser } from "@/lib/cloud-friends";
+import { friendlyDbError, searchCloudUsers, shareInvite, type CloudUser } from "@/lib/cloud-friends";
 
 export const Route = createFileRoute("/friends")({
   head: () => ({
@@ -77,10 +77,10 @@ function FriendsPage() {
   const handleSendCloudRequest = async (targetId: string, targetName: string) => {
     try {
       await sendRequest(targetId);
-      toast.success(`🚀 ${t("requestSent")} بنجاح إلى ${targetName} عبر السحاب!`);
+      toast.success(`🚀 انرسل طلب الصداقة إلى ${targetName}`);
     } catch (error) {
       console.error("فشل إرسال طلب الصداقة السحابي:", error);
-      toast.error("فشل إرسال طلب الصداقة السحابي، يرجى إعادة المحاولة.");
+      toast.error(friendlyDbError(error));
     }
   };
 
