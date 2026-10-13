@@ -1,14 +1,15 @@
 import type { ReactNode } from "react";
 import { Sidebar } from "./Sidebar";
-import { MobileNav } from "./MobileNav";
+import { MobileBottomNav, MobileTopBar } from "./MobileNav";
 
 export function AppShell({ children }: { children: ReactNode }) {
   return (
-    <div className="flex h-screen overflow-hidden bg-paper text-ink">
+    <div className="flex h-dvh overflow-hidden bg-paper text-ink">
       <Sidebar />
       <div className="flex min-w-0 flex-1 flex-col">
-        <MobileNav />
+        <MobileTopBar />
         <div className="flex min-h-0 flex-1">{children}</div>
+        <MobileBottomNav />
       </div>
     </div>
   );

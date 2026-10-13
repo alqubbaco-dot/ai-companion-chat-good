@@ -3,6 +3,7 @@ import { useI18n, type TranslationKey } from "@/lib/i18n";
 import { useTheme } from "@/lib/theme";
 import { useChatStore } from "@/lib/chat-store";
 import { useFriends } from "@/lib/friends-store";
+import { Avatar } from "./Avatar";
 
 type NavItem = {
   to: string;
@@ -42,11 +43,16 @@ export function Sidebar() {
   return (
     <aside className="hidden w-64 shrink-0 flex-col border-e-2 border-line bg-cream md:flex">
       <div className="px-5 pb-3 pt-6 border-b border-line/10">
-        <div className="inline-flex items-center gap-2 rounded-2xl bg-ink px-3 py-2 text-cream">
-          <span className="font-mono text-[10px] text-butter">AI</span>
-          <span className="font-display text-lg font-extrabold leading-none">
-            {t("appName")}
-          </span>
+        <div className="flex items-center gap-2.5">
+          <img
+            src="/icons/logo.webp"
+            alt=""
+            width={44}
+            height={44}
+            className="size-11 shrink-0 rounded-[30%] shadow-sm"
+            draggable={false}
+          />
+          <span className="font-display text-lg font-extrabold leading-tight">{t("appName")}</span>
         </div>
         <p className="mt-3 text-[11px] leading-snug text-muted-ink">{t("appTagline")}</p>
         
@@ -115,9 +121,7 @@ export function Sidebar() {
           to="/account"
           className="flex animate-pop items-center gap-3 rounded-2xl border-2 border-line bg-cream p-3 transition-colors hover:bg-ink/5"
         >
-          <div className="grid size-10 place-items-center rounded-full bg-teal/20 font-display font-bold">
-            {profile.name.trim().charAt(0) || "؟"}
-          </div>
+          <Avatar name={profile.name} />
           <div className="min-w-0">
             <p className="truncate text-sm font-semibold">{profile.name}</p>
             <p className="truncate text-[11px] text-muted-ink">{profile.handle}</p>
