@@ -14,15 +14,15 @@ export type AskResult =
 
 // نجرب الموديلات بالترتيب: إذا واحد مضغوط أو انطفى أو بطيء، ننتقل للي بعده تلقائياً
 const MODELS = [
+  "gemini-3.5-flash-lite",
   "gemini-3.6-flash",
   "gemini-flash-latest",
   "gemini-3.8-flash",
-  "gemini-3.5-flash-lite",
 ];
 
 // أقصى وقت ننتظر بيه كل موديل، وأقصى وقت للطلب كله، حتى المحادثة ما تعلّك
-const PER_MODEL_TIMEOUT_MS = 12_000;
-const TOTAL_BUDGET_MS = 26_000;
+const PER_MODEL_TIMEOUT_MS = 10_000;
+const TOTAL_BUDGET_MS = 30_000;
 
 const FUNNY_AR = `إنت "الغباء الصناعي"، مساعد عراقي تحشيشي خفيف الدم.
 تحچي باللهجة العراقية البغدادية الدارجة، مثل صديق كاعد ويه ربعه بالكهوة.
@@ -81,13 +81,53 @@ export const askGemini = createServerFn({ method: "POST" })
       : data.lang === "ar" ? SERIOUS_AR : SERIOUS_EN;
 
     let lastError = "unknown";
+    // نطلب من الموديل يفكّر قليل حتى يرد بسرعة. إذا رفض هالإعداد، نكمل بدونه
+    let useLowThinking = true;
     const startedAt = Date.now();
-    for (const model of MODELS) {
-      const remaining = TOTAL_BUDGET_MS - (Date.now() - startedAt);
-      if (remaining < 2_000) {
-        lastError = `${lastError} | out of time`;
-        break;
+    const timeLeft = () => TOTAL_BUDGET_MS - (Date.now() - startedAt);
+
+    // جولتين على كل الموديلات: إذا كلها مزحومة بالجولة الأولى، نصبر شوية ونعيد
+    for (let round = 0; round < 2; round++) {
+      if (round > 0) {
+        if (timeLeft() < 5_000) break;
+        await new Promise((r) => setTimeout(r, 1_200));
       }
+      for (const model of MODELS) {
+        if (timeLeft() < 2_500) {
+          lastError = `${lastError} | out of time`;
+          return { ok: false, error: lastError };
+        }
+        const attempt = await callModel(model, useLowThinking);
+        if (attempt.kind === "ok") {
+          console.log(`Gemini ok: ${model} in ${Date.now() - startedAt}ms`);
+          return { ok: true, text: attempt.text, model };
+        }
+        lastError = attempt.error;
+        console.error("Gemini error:", lastError);
+        if (attempt.kind === "fatal") return { ok: false, error: lastError };
+        if (attempt.kind === "bad_thinking" && useLowThinking) {
+          // الموديل ما يقبل إعداد التفكير: نعيد نفس الموديل بدونه
+          useLowThinking = false;
+          const retry = await callModel(model, false);
+          if (retry.kind === "ok") return { ok: true, text: retry.text, model };
+          lastError = retry.error;
+          console.error("Gemini error:", lastError);
+        }
+      }
+    }
+    return { ok: false, error: lastError };
+
+    async function callModel(
+      model: string,
+      lowThinking: boolean,
+    ): Promise<
+      | { kind: "ok"; text: string }
+      | { kind: "retry" | "fatal" | "bad_thinking"; error: string }
+    > {
+      const generationConfig: Record<string, unknown> = {
+        temperature: data.isFunny ? 1.0 : 0.2,
+      };
+      if (lowThinking) generationConfig.thinkingConfig = { thinkingLevel: "low" };
       try {
         const response = await fetch(
           `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
@@ -100,37 +140,41 @@ export const askGemini = createServerFn({ method: "POST" })
             body: JSON.stringify({
               contents: [{ role: "user", parts: [{ text: data.prompt }] }],
               systemInstruction: { parts: [{ text: systemText }] },
-              generationConfig: { temperature: data.isFunny ? 1.0 : 0.2 },
+              generationConfig,
             }),
-            signal: AbortSignal.timeout(Math.min(PER_MODEL_TIMEOUT_MS, remaining)),
+            signal: AbortSignal.timeout(Math.min(PER_MODEL_TIMEOUT_MS, timeLeft())),
           },
         );
 
         if (!response.ok) {
           const body = (await response.text()).slice(0, 300);
-          lastError = `${model} → HTTP ${response.status}: ${body}`;
-          console.error("Gemini error:", lastError);
-          // مفتاح غلط أو ممنوع: ما يفيد نجرب موديل ثاني، نوقف
+          const error = `${model} → HTTP ${response.status}: ${body}`;
+          // مفتاح غلط أو ممنوع: ما يفيد نجرب موديل ثاني
           if (response.status === 401 || response.status === 403) {
-            return { ok: false, error: lastError };
+            return { kind: "fatal", error };
           }
-          // غير هيچ (موديل مضغوط 503، حد استخدام 429، موديل منطفي 404...): جرّب اللي بعده
-          continue;
+          if (response.status === 400 && /thinking/i.test(body)) {
+            return { kind: "bad_thinking", error };
+          }
+          // موديل مزحوم 503، حد استخدام 429، موديل منطفي 404...: جرّب اللي بعده
+          return { kind: "retry", error };
         }
 
         const json = (await response.json()) as {
-          candidates?: { content?: { parts?: { text?: string }[] } }[];
+          candidates?: { content?: { parts?: { text?: string; thought?: boolean }[] } }[];
         };
         const text = json.candidates?.[0]?.content?.parts
-          ?.map((p) => p.text ?? "")
+          ?.filter((p) => !p.thought)
+          .map((p) => p.text ?? "")
           .join("")
           .trim();
-        if (text) return { ok: true, text, model };
-        lastError = `${model} → empty reply`;
+        if (text) return { kind: "ok", text };
+        return { kind: "retry", error: `${model} → empty reply` };
       } catch (err) {
-        lastError = `${model} → ${err instanceof Error ? err.message : String(err)}`;
-        console.error("Gemini fetch failed:", lastError);
+        return {
+          kind: "retry",
+          error: `${model} → ${err instanceof Error ? err.message : String(err)}`,
+        };
       }
     }
-    return { ok: false, error: lastError };
   });
