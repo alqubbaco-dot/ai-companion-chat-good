@@ -5,6 +5,7 @@ import { useFriends } from "@/lib/friends-store";
 import {
   getPrivateConversation,
   getPrivateMessages,
+  markConversationRead,
   sendPrivateMessage,
   subscribeToPrivateMessages,
   type PrivateMessage,
@@ -63,7 +64,10 @@ function PrivateChatPage() {
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+    // المحادثة مفتوحة = كل رسائلها مقروءة
+    const last = messages[messages.length - 1];
+    markConversationRead(conversationId, last?.created_at);
+  }, [messages, conversationId]);
 
   const otherUser = directory.find((person) => person.id === otherUserId);
   const title = otherUser?.name || "محادثة خاصة";
@@ -125,4 +129,4 @@ function PrivateChatPage() {
       </div>
     </PageBody>
   );
-}
+}

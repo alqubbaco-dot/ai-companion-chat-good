@@ -17,10 +17,24 @@ export function PersonRow({
   person,
   children,
   note,
+  lastMessage,
+  lastTime,
+  unread = 0,
+  onCall,
+  showQuickActions = false,
 }: {
   person: Person;
   children?: ReactNode;
   note?: string;
+  /** مقطع من آخر رسالة (مثل الواتساب) */
+  lastMessage?: string;
+  /** وقت آخر رسالة جاهز للعرض */
+  lastTime?: string;
+  /** عدد الرسائل غير المقروءة */
+  unread?: number;
+  onCall?: (id: string) => void;
+  /** إظهار زرّي الرسالة والاتصال مباشرة */
+  showQuickActions?: boolean;
 }) {
   const { t, lang } = useI18n();
   const navigate = useNavigate();
@@ -54,15 +68,29 @@ export function PersonRow({
           <div className={`grid size-11 place-items-center rounded-full font-display font-bold ${accentBg[person.accent]}`}>
             {name.charAt(0)}
           </div>
-          <span className={`absolute -bottom-0.5 -start-0.5 size-3.5 rounded-full ring-2 ring-cream ${isOnline ? "bg-teal" : "bg-ink/25"}`} />
+          <span className={`absolute -bottom-0.5 -start-0.5 size-3.5 rounded-full ring-2 ring-cream ${isOnline ? "bg-emerald-500" : "bg-ink/25"}`} />
         </div>
         
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold text-ink hover:text-teal transition-colors">{name}</p>
-          <p className="truncate text-[11px] text-muted-ink">
-            {note ?? `${person.handle} · ${role}`}
-          </p>
-          <p className={`text-[11px] font-semibold ${isOnline ? "text-teal" : "text-muted-ink"}`}>
+          <div className="flex items-center gap-2">
+            <p className="min-w-0 flex-1 truncate text-sm font-semibold text-ink hover:text-teal transition-colors">{name}</p>
+            {lastTime ? (
+              <span className={`shrink-0 text-[10.5px] ${unread > 0 ? "font-bold text-emerald-600" : "text-muted-ink"}`}>
+                {lastTime}
+              </span>
+            ) : null}
+          </div>
+          <div className="flex items-center gap-2">
+            <p className={`min-w-0 flex-1 truncate text-[12px] ${unread > 0 ? "font-semibold text-ink" : "text-muted-ink"}`}>
+              {lastMessage ?? note ?? `${person.handle} · ${role}`}
+            </p>
+            {unread > 0 ? (
+              <span className="grid min-w-5 shrink-0 place-items-center rounded-full bg-emerald-500 px-1.5 text-[10.5px] font-bold leading-5 text-white">
+                {unread > 99 ? "99+" : unread}
+              </span>
+            ) : null}
+          </div>
+          <p className={`text-[11px] font-semibold ${isOnline ? "text-emerald-600" : "text-muted-ink"}`}>
             {isOnline ? t("online") : t("offline")}
           </p>
         </div>
@@ -70,6 +98,36 @@ export function PersonRow({
       
       {/* منطقة الأزرار: تم تنظيفها من أزرار الاتصال المكررة لتبقى فقط أزرار الإعدادات الناعمة */}
       <div className="flex shrink-0 items-center gap-1.5 z-10">
+        {showQuickActions ? (
+          <>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                void handleCardClick();
+              }}
+              className="grid size-9 place-items-center rounded-full border-2 border-line bg-cream hover:bg-line/20 transition-colors cursor-pointer"
+              title="رسالة"
+              aria-label="رسالة"
+            >
+              💬
+            </button>
+            {onCall ? (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onCall(person.id);
+                }}
+                className="grid size-9 place-items-center rounded-full border-2 border-line bg-cream hover:bg-line/20 transition-colors cursor-pointer"
+                title="اتصال"
+                aria-label="اتصال"
+              >
+                📞
+              </button>
+            ) : null}
+          </>
+        ) : null}
         {/* زر الترس الدائري والناعم لعزل الحظر والحذف مثل خيارات الواتساب */}
         <button
           onClick={() => setShowOptions(!showOptions)}

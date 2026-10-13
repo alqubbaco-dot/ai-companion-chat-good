@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { PageBody } from "@/components/app/AppShell";
@@ -6,6 +6,26 @@ import { PersonRow, RowButton } from "@/components/friends/PersonRow";
 import { useFriends } from "@/lib/friends-store";
 import { useI18n } from "@/lib/i18n";
 import { friendlyDbError, searchCloudUsers, shareInvite, type CloudUser } from "@/lib/cloud-friends";
+import {
+  getFriendChatSummaries,
+  subscribeToAllMyMessages,
+  type FriendChatSummary,
+} from "@/lib/private-chat";
+
+// وقت آخر رسالة بأسلوب الواتساب: اليوم = الساعة، أمس، أيام الأسبوع، وبعدها التاريخ
+function formatChatTime(iso: string, lang: string): string {
+  const date = new Date(iso);
+  const now = new Date();
+  const locale = lang === "ar" ? "ar-IQ" : "en";
+  const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  const days = Math.round((startOfDay(now) - startOfDay(date)) / 86_400_000);
+  if (days <= 0) {
+    return new Intl.DateTimeFormat(locale, { hour: "numeric", minute: "2-digit" }).format(date);
+  }
+  if (days === 1) return lang === "ar" ? "أمس" : "Yesterday";
+  if (days < 7) return new Intl.DateTimeFormat(locale, { weekday: "long" }).format(date);
+  return new Intl.DateTimeFormat(locale, { day: "numeric", month: "numeric", year: "2-digit" }).format(date);
+}
 
 export const Route = createFileRoute("/friends")({
   head: () => ({
@@ -30,6 +50,8 @@ function FriendsPage() {
   const [query, setQuery] = useState("");
   const [cloudResults, setCloudResults] = useState<CloudUser[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [friendQuery, setFriendQuery] = useState("");
+  const [summaries, setSummaries] = useState<Record<string, FriendChatSummary>>({});
   
   const {
     profile,
@@ -66,12 +88,67 @@ function FriendsPage() {
     return () => clearTimeout(delayDebounce);
   }, [query, profile]);
 
+  // تحميل آخر رسالة لكل صديق + تحديث لحظي عند وصول أي رسالة جديدة
+  useEffect(() => {
+    if (!profile.id) return;
+    let active = true;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+
+    const load = async () => {
+      try {
+        const next = await getFriendChatSummaries(profile.id);
+        if (active) setSummaries(next);
+      } catch (err) {
+        console.error("تعذر تحميل آخر الرسائل:", err);
+      }
+    };
+    const reloadSoon = () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => void load(), 400);
+    };
+
+    void load();
+    const unsubscribe = subscribeToAllMyMessages(reloadSoon);
+    const onVisible = () => {
+      if (document.visibilityState === "visible") reloadSoon();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+
+    return () => {
+      active = false;
+      clearTimeout(timer);
+      unsubscribe();
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [profile.id, friends.length]);
+
+  // ترتيب مثل الواتساب: الأحدث محادثة فوق، والباقي أبجدياً + فلترة البحث بين الأصدقاء
+  const visibleFriends = useMemo(() => {
+    const q = friendQuery.trim().toLowerCase();
+    const digits = q.replace(/\D/g, "");
+    const list = friends.filter((person) => {
+      if (!q) return true;
+      return (
+        person.name.toLowerCase().includes(q) ||
+        person.nameEn.toLowerCase().includes(q) ||
+        person.handle.toLowerCase().includes(q) ||
+        (digits.length >= 3 && (person.phone ?? "").replace(/\D/g, "").includes(digits))
+      );
+    });
+    return list.sort((a, b) => {
+      const at = summaries[a.id]?.lastAt;
+      const bt = summaries[b.id]?.lastAt;
+      if (at && bt) return bt.localeCompare(at);
+      if (at) return -1;
+      if (bt) return 1;
+      const an = lang === "ar" ? a.name : a.nameEn;
+      const bn = lang === "ar" ? b.name : b.nameEn;
+      return an.localeCompare(bn, lang === "ar" ? "ar" : "en");
+    });
+  }, [friends, summaries, friendQuery, lang]);
+
   const handleAudioCall = (id: string, name: string) => {
     toast.info(`📞 جاري بدء الاتصال الصوتي مع ${name}... (جاهز للربط السحابي)`);
-  };
-
-  const handleVideoCall = (id: string, name: string) => {
-    toast.info(`📹 جاري بدء اتصال الفيديو مع ${name}... (جاهز للربط السحابي)`);
   };
 
   const handleSendCloudRequest = async (targetId: string, targetName: string) => {
@@ -147,8 +224,8 @@ function FriendsPage() {
                   <PersonRow 
                     key={person.id} 
                     person={person}
-                    onAudioCall={relation === "friend" ? (id) => handleAudioCall(id, name) : undefined}
-                    onVideoCall={relation === "friend" ? (id) => handleVideoCall(id, name) : undefined}
+                    showQuickActions={relation === "friend"}
+                    onCall={relation === "friend" ? (id) => handleAudioCall(id, name) : undefined}
                   >
                     {relation === "none" ? (
                       <RowButton
@@ -188,19 +265,49 @@ function FriendsPage() {
           <h2 className="font-mono text-[11px] tracking-widest text-muted-ink">
             — {t("myFriends")} ({friends.length}) —
           </h2>
+          {friends.length > 0 ? (
+            <div className="flex items-center gap-2 rounded-2xl border-2 border-line/70 bg-cream/60 px-3 py-1.5">
+              <span className="text-sm">🔎</span>
+              <input
+                value={friendQuery}
+                onChange={(event) => setFriendQuery(event.target.value)}
+                placeholder={lang === "ar" ? "ابحث بين أصدقائك…" : "Search your friends…"}
+                className="w-full bg-transparent text-sm outline-none placeholder:text-muted-ink/70"
+              />
+              {friendQuery ? (
+                <button
+                  type="button"
+                  onClick={() => setFriendQuery("")}
+                  className="shrink-0 text-xs text-muted-ink"
+                  aria-label="مسح"
+                >
+                  ✕
+                </button>
+              ) : null}
+            </div>
+          ) : null}
           {friends.length === 0 ? (
             <p className="rounded-2xl border-2 border-dashed border-line bg-cream/60 px-4 py-8 text-center text-sm text-muted-ink">
               {t("noFriends")}
             </p>
+          ) : visibleFriends.length === 0 ? (
+            <p className="text-sm text-muted-ink">{t("noResults")}</p>
           ) : (
-            friends.map((person) => {
+            visibleFriends.map((person) => {
               const name = lang === "ar" ? person.name : person.nameEn;
+              const summary = summaries[person.id];
+              const preview = summary
+                ? `${summary.lastSenderId === profile.id ? (lang === "ar" ? "أنت: " : "You: ") : ""}${summary.lastMessage}`
+                : undefined;
               return (
-                <PersonRow 
-                  key={person.id} 
+                <PersonRow
+                  key={person.id}
                   person={person}
-                  onAudioCall={(id) => handleAudioCall(id, name)}
-                  onVideoCall={(id) => handleVideoCall(id, name)}
+                  lastMessage={preview}
+                  lastTime={summary ? formatChatTime(summary.lastAt, lang) : undefined}
+                  unread={summary?.unread ?? 0}
+                  showQuickActions
+                  onCall={(id) => handleAudioCall(id, name)}
                 >
                   <RowButton tone="danger" onClick={() => removeFriend(person.id)}>
                     {t("removeFriend")}
