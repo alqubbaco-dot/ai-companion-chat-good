@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useFriends } from "@/lib/friends-store";
-import { enablePush, ensurePushSubscription, pushState } from "@/lib/push-client";
+import { enablePush, ensurePushSubscription, nativeBridge, pushState, registerNativeDevice } from "@/lib/push-client";
 
 const DISMISS_KEY = "push-prompt-dismissed-at";
 const DISMISS_DAYS = 3;
@@ -23,6 +23,11 @@ export function PushPrompt() {
 
   useEffect(() => {
     if (!profile.id) return;
+    // داخل تطبيق الأندرويد: الإشعارات عن طريق Firebase، ما نحتاج نسأل
+    if (nativeBridge()) {
+      setShow(false);
+      return registerNativeDevice(profile.id);
+    }
     const state = pushState();
     if (state === "granted") {
       // الإذن موجود: نسجّل الجهاز بصمت (يتحدث إذا تغيّر الحساب)

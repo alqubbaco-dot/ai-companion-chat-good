@@ -6,6 +6,53 @@ import { sendPushToFriend, type PushKind } from "./push-server";
 
 export type PushState = "unsupported" | "default" | "denied" | "granted";
 
+// ───────────── تطبيق الأندرويد (WebView) ─────────────
+
+type GhabiyNativeBridge = {
+  isNative: () => boolean;
+  getFcmToken: () => string;
+  setUser: (userId: string) => void;
+};
+
+export function nativeBridge(): GhabiyNativeBridge | null {
+  if (typeof window === "undefined") return null;
+  const bridge = (window as unknown as { GhabiyNative?: GhabiyNativeBridge }).GhabiyNative;
+  return bridge && typeof bridge.getFcmToken === "function" ? bridge : null;
+}
+
+let savedNativeToken = "";
+
+async function saveNativeToken(token: string) {
+  if (!token || token === savedNativeToken) return;
+  const { error } = await supabase.rpc("save_push_subscription", {
+    p_endpoint: `fcm:${token}`,
+    p_p256dh: "fcm",
+    p_auth: "fcm",
+    p_user_agent: "android-app",
+  });
+  if (error) console.error("تعذر حفظ جهاز الأندرويد:", error);
+  else savedNativeToken = token;
+}
+
+// يسجّل تلفون الأندرويد للمستخدم الحالي حتى توصله المكالمات
+export function registerNativeDevice(userId: string): () => void {
+  const bridge = nativeBridge();
+  if (!bridge || !userId) return () => undefined;
+  try {
+    bridge.setUser(userId);
+  } catch {
+    /* */
+  }
+  savedNativeToken = "";
+  void saveNativeToken(bridge.getFcmToken());
+  const onToken = (event: Event) => {
+    const token = (event as CustomEvent<string>).detail;
+    if (typeof token === "string") void saveNativeToken(token);
+  };
+  window.addEventListener("ghabiy-fcm-token", onToken);
+  return () => window.removeEventListener("ghabiy-fcm-token", onToken);
+}
+
 export function pushSupported(): boolean {
   return (
     typeof window !== "undefined" &&

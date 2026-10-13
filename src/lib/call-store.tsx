@@ -172,6 +172,9 @@ export function CallProvider({ children }: { children: ReactNode }) {
   const peerChannelPeerRef = useRef<string | null>(null);
   const ringerRef = useRef<ReturnType<typeof createRinger> | null>(null);
   const ringTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  // المستخدم ضغط "رد" من شاشة الأندرويد: نرد تلقائياً أول ما توصل الدعوة
+  const autoAcceptRef = useRef<string | null>(null);
+  const acceptCallRef = useRef<() => Promise<void>>(async () => undefined);
   const relationOfRef = useRef(relationOf);
   relationOfRef.current = relationOf;
   const directoryRef = useRef(directory);
@@ -443,6 +446,8 @@ export function CallProvider({ children }: { children: ReactNode }) {
     }
   }, [cleanup, createPeer, flushPendingIce, getMic, myId, sendSignal, updatePhase]);
 
+  acceptCallRef.current = acceptCall;
+
   const rejectCall = useCallback(() => {
     const info = callRef.current;
     if (!info) return;
@@ -517,6 +522,11 @@ export function CallProvider({ children }: { children: ReactNode }) {
           await openPeerChannel(signal.from);
         } catch (err) {
           console.error("تعذر فتح قناة الرد:", err);
+        }
+        if (autoAcceptRef.current === signal.callId) {
+          autoAcceptRef.current = null;
+          void acceptCallRef.current();
+          return;
         }
         ringerRef.current = createRinger("incoming");
         ringerRef.current.start();
@@ -604,8 +614,10 @@ export function CallProvider({ children }: { children: ReactNode }) {
           const callId = params.get("call");
           const from = params.get("from");
           if (callId && from && from !== myId) {
+            if (params.get("autoaccept") === "1") autoAcceptRef.current = callId;
             params.delete("call");
             params.delete("from");
+            params.delete("autoaccept");
             const rest = params.toString();
             window.history.replaceState(null, "", window.location.pathname + (rest ? `?${rest}` : ""));
             void (async () => {
