@@ -12,8 +12,17 @@ export type AskResult =
   | { ok: true; text: string; model: string }
   | { ok: false; error: string };
 
-// نجرب الموديلات بالترتيب: إذا Google أطفت واحد، ننتقل للي بعده تلقائياً
-const MODELS = ["gemini-3.8-flash", "gemini-flash-latest", "gemini-3.6-flash"];
+// نجرب الموديلات بالترتيب: إذا واحد مضغوط أو انطفى أو بطيء، ننتقل للي بعده تلقائياً
+const MODELS = [
+  "gemini-3.6-flash",
+  "gemini-flash-latest",
+  "gemini-3.8-flash",
+  "gemini-3.5-flash-lite",
+];
+
+// أقصى وقت ننتظر بيه كل موديل، وأقصى وقت للطلب كله، حتى المحادثة ما تعلّك
+const PER_MODEL_TIMEOUT_MS = 12_000;
+const TOTAL_BUDGET_MS = 26_000;
 
 const FUNNY_AR = `إنت "الغباء الصناعي"، مساعد عراقي تحشيشي خفيف الدم.
 تحچي باللهجة العراقية البغدادية الدارجة، مثل صديق كاعد ويه ربعه بالكهوة.
@@ -72,7 +81,13 @@ export const askGemini = createServerFn({ method: "POST" })
       : data.lang === "ar" ? SERIOUS_AR : SERIOUS_EN;
 
     let lastError = "unknown";
+    const startedAt = Date.now();
     for (const model of MODELS) {
+      const remaining = TOTAL_BUDGET_MS - (Date.now() - startedAt);
+      if (remaining < 2_000) {
+        lastError = `${lastError} | out of time`;
+        break;
+      }
       try {
         const response = await fetch(
           `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
@@ -87,6 +102,7 @@ export const askGemini = createServerFn({ method: "POST" })
               systemInstruction: { parts: [{ text: systemText }] },
               generationConfig: { temperature: data.isFunny ? 1.0 : 0.2 },
             }),
+            signal: AbortSignal.timeout(Math.min(PER_MODEL_TIMEOUT_MS, remaining)),
           },
         );
 
@@ -94,9 +110,12 @@ export const askGemini = createServerFn({ method: "POST" })
           const body = (await response.text()).slice(0, 300);
           lastError = `${model} → HTTP ${response.status}: ${body}`;
           console.error("Gemini error:", lastError);
-          // الموديل غير موجود أو انطفى: جرّب اللي بعده. غير هيچ (مفتاح غلط، حد استخدام) نوقف
-          if (response.status === 404 || response.status === 400) continue;
-          return { ok: false, error: lastError };
+          // مفتاح غلط أو ممنوع: ما يفيد نجرب موديل ثاني، نوقف
+          if (response.status === 401 || response.status === 403) {
+            return { ok: false, error: lastError };
+          }
+          // غير هيچ (موديل مضغوط 503، حد استخدام 429، موديل منطفي 404...): جرّب اللي بعده
+          continue;
         }
 
         const json = (await response.json()) as {
