@@ -18,11 +18,13 @@ export async function searchCloudUsers(query: string, currentUserId: string): Pr
   if (!q) return [];
 
   try {
-    // جلب الحسابات المتطابقة مع استثناء حساب المستخدم الحالي لمنع إرسال طلب لنفسه
+    // جلب الحسابات المتطابقة بالاسم أو اسم المستخدم، مع استثناء حساب المستخدم الحالي
+    const safe = q.replace(/[,()%]/g, " ").trim();
+    if (!safe) return [];
     let request = supabase
       .from("users_directory")
       .select("id, name, handle, phone, status")
-      .or(`name.ilike.%${q}%,phone.ilike.%${q}%`);
+      .or(`name.ilike.%${safe}%,handle.ilike.%${safe}%`);
 
     if (currentUserId) request = request.neq("id", currentUserId);
 
