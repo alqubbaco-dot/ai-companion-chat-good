@@ -28,42 +28,36 @@ export function Composer({
     requestAnimationFrame(() => ref.current?.focus());
   };
 
-  return (
-    <div className="px-4 pb-5 pt-2 sm:px-6 space-y-2">
-      {/* مجسم مفتاح التبديل (Toggle Switch) الأنيق والمحكم لتحديد مسار النبضة فوريّاً */}
-      <div className="mx-auto flex w-full max-w-3xl items-center justify-between px-2 py-1 bg-cream/30 rounded-2xl border border-line/40 animate-rise">
-        <span className="text-[11px] font-bold text-muted-ink select-none">
-          {isFunny ? "🎭 نمط الاستجابة: الغباء الصناعي (هزلي)" : "🧠 نمط الاستجابة: العقل المفكر (جاد)"}
-        </span>
-        <div className="flex items-center gap-1 bg-paper p-0.5 rounded-xl border border-line/60">
-          <button
-            type="button"
-            onClick={() => setIsFunny(false)}
-            className={`rounded-lg px-2.5 py-1 text-[11px] font-extrabold transition-all cursor-pointer ${
-              !isFunny ? "bg-ink text-cream shadow-sm" : "text-muted-ink hover:text-ink"
-            }`}
-          >
-            🧐 جاد
-          </button>
-          <button
-            type="button"
-            onClick={() => setIsFunny(true)}
-            className={`rounded-lg px-2.5 py-1 text-[11px] font-extrabold transition-all cursor-pointer ${
-              isFunny ? "bg-coral text-cream shadow-sm border border-line/20" : "text-muted-ink hover:text-ink"
-            }`}
-          >
-            🤪 هزلي
-          </button>
-        </div>
-      </div>
+  const toggleMode = () => {
+    const next = !isFunny;
+    setIsFunny(next);
+    toast(next ? t("funnyModeOn") : t("seriousModeOn"), { duration: 1800 });
+  };
 
-      <div className="mx-auto flex w-full max-w-3xl animate-rise items-end gap-2 rounded-3xl border-2 border-line bg-cream p-2">
+  return (
+    <div className="px-3 pb-3 pt-2 sm:px-6 sm:pb-5">
+      <div className="mx-auto flex w-full max-w-3xl animate-rise items-end gap-1.5 rounded-[1.75rem] border border-line bg-cream p-1.5 shadow-sm focus-within:border-butter/60">
+        {/* زر صغير للتبديل بين الهزلي والجاد */}
+        <button
+          type="button"
+          onClick={toggleMode}
+          title={isFunny ? t("funnyMode") : t("seriousMode")}
+          aria-label={isFunny ? t("funnyMode") : t("seriousMode")}
+          className={`flex h-10 shrink-0 items-center gap-1 rounded-full px-2.5 text-[12px] font-bold transition-colors ${
+            isFunny
+              ? "bg-brand-accent/20 text-ink"
+              : "bg-ink/5 text-muted-ink"
+          }`}
+        >
+          <span className="text-base leading-none">{isFunny ? "🤪" : "🧐"}</span>
+          <span className="hidden sm:inline">{isFunny ? t("funnyMode") : t("seriousMode")}</span>
+        </button>
         <button
           type="button"
           title={t("attach")}
           aria-label={t("attach")}
           onClick={() => toast(t("attachSoon"))}
-          className="grid size-11 shrink-0 place-items-center rounded-2xl text-xl transition-colors hover:bg-ink/5"
+          className="grid size-10 shrink-0 place-items-center rounded-full text-lg text-muted-ink transition-colors hover:bg-ink/5"
         >
           📎
         </button>
@@ -80,15 +74,15 @@ export function Composer({
             }
           }}
           placeholder={t("composerPlaceholder")}
-          className="max-h-40 flex-1 resize-none bg-transparent py-2.5 text-[15px] outline-none placeholder:text-muted-ink/70 text-right"
-          dir="rtl"
+          className="max-h-40 min-w-0 flex-1 resize-none bg-transparent px-1 py-2.5 text-[15px] outline-none placeholder:text-muted-ink/70"
+          dir="auto"
         />
         <button
           type="button"
           onClick={submit}
           disabled={disabled || !value.trim()}
           aria-label={t("send")}
-          className="grid size-11 shrink-0 place-items-center rounded-2xl bg-ink font-bold text-cream transition-colors hover:bg-coral disabled:opacity-40 cursor-pointer"
+          className="bg-brand grid size-10 shrink-0 place-items-center rounded-full text-lg font-bold shadow-sm transition-transform hover:scale-105 disabled:opacity-40 disabled:hover:scale-100 cursor-pointer"
         >
           ↑
         </button>

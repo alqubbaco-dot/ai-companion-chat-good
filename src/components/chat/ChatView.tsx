@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Composer } from "./Composer";
 import { MessageBubble, TypingBubble } from "./MessageBubble";
 import { ConversationList } from "./ConversationList";
+import { Avatar } from "@/components/app/Avatar";
 
 export function ChatView({ chatId }: { chatId?: string }) {
   const { t } = useI18n();
@@ -48,26 +49,25 @@ export function ChatView({ chatId }: { chatId?: string }) {
   };
 
   const chatTitle = conversation?.title || t("assistant");
-  const avatarLetter = chatTitle.trim().charAt(0) || "غ";
-  const isFriendChat = conversation?.title && conversation.title !== t("assistant");
+  const isFriendChat = Boolean(conversation?.title && conversation.title !== t("assistant"));
 
   return (
     <>
       <ConversationList activeId={chatId} />
       <main className="flex min-w-0 flex-1 flex-col bg-paper">
-        <header className="flex h-16 shrink-0 items-center gap-4 border-b-2 border-line bg-cream/70 px-4 sm:px-6">
+        <header className="flex h-16 shrink-0 items-center gap-4 border-b border-line bg-cream/80 px-4 backdrop-blur sm:px-6">
           {isFriendChat && (
             <div className="flex items-center gap-1.5 shrink-0">
               <button
                 onClick={handleAudioCall}
-                className="p-2 rounded-full border-2 border-line bg-cream hover:bg-line/20 transition-colors cursor-pointer"
+                className="grid size-9 place-items-center rounded-full text-muted-ink hover:bg-ink/5 transition-colors cursor-pointer"
                 title="اتصال صوتي"
               >
                 <span className="text-sm">📞</span>
               </button>
               <button
                 onClick={handleVideoCall}
-                className="p-2 rounded-full border-2 border-line bg-cream hover:bg-line/20 transition-colors cursor-pointer"
+                className="grid size-9 place-items-center rounded-full text-muted-ink hover:bg-ink/5 transition-colors cursor-pointer"
                 title="اتصال فيديو"
               >
                 <span className="text-sm">📹</span>
@@ -84,24 +84,20 @@ export function ChatView({ chatId }: { chatId?: string }) {
                 {t("assistantStatus")}
               </p>
             </div>
-            <div className="grid size-10 place-items-center rounded-full bg-ink font-display font-bold text-cream select-none shrink-0">
-              {avatarLetter}
-            </div>
+            <Avatar bot={!isFriendChat} name={chatTitle} />
           </div>
         </header>
 
         <div className="min-h-0 flex-1 overflow-y-auto px-4 py-6 sm:px-6">
           <div className="mx-auto flex w-full max-w-3xl flex-col gap-5">
             {messages.length === 0 ? (
-              <div className="mt-10 animate-rise rounded-3xl border-2 border-dashed border-line bg-cream/60 px-6 py-10 text-center">
-                <div className="mx-auto grid size-14 place-items-center rounded-full bg-ink font-display text-2xl font-bold text-cream select-none">
-                  {avatarLetter}
-                </div>
+              <div className="mt-10 animate-rise px-6 py-10 text-center">
+                <Avatar bot={!isFriendChat} name={chatTitle} size="xl" className="mx-auto shadow-lg" />
                 <h2 className="mt-4 font-display text-xl font-extrabold text-ink">
                   {isFriendChat ? `${t("emptyChatTitle")} ${chatTitle}` : t("emptyChatTitle")}
                 </h2>
                 <p className="mt-1 text-[13px] text-muted-ink">
-                  {isFriendChat ? "يمكنك البدء بكتابة رسالتك الأولى وإطلاق محادثتك الآمنة الآن." : t("emptyChatBody")}
+                  {isFriendChat ? "اكتب أول رسالة وابدأ السوالف 👋" : t("emptyChatBody")}
                 </p>
               </div>
             ) : (
