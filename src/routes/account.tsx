@@ -6,6 +6,7 @@ import { useChatStore } from "@/lib/chat-store";
 import { useI18n } from "@/lib/i18n";
 import { supabase as cloudClient } from "@/lib/supabase";
 import { toast } from "sonner";
+import { useFriends } from "@/lib/friends-store";
 
 export const Route = createFileRoute("/account")({
   head: () => ({
@@ -23,6 +24,8 @@ function AccountPage() {
   const { conversations, clearAll } = useChatStore();
   const [isSaving, setIsSaving] = useState(false);
   const [account, setAccount] = useState({ id: "", name: "", handle: "", email: "" });
+  const [nameDraft, setNameDraft] = useState("");
+  const { refreshProfile } = useFriends();
 
   useEffect(() => {
     let active = true;
@@ -45,6 +48,7 @@ function AccountPage() {
           handle: directoryProfile?.handle || "",
           email: user.email || user.phone || "",
         });
+        setNameDraft(directoryProfile?.name || "");
       }
     };
 
@@ -60,12 +64,38 @@ function AccountPage() {
     return { chatsCount: conversations.length, messagesCount: totalMessages };
   }, [conversations]);
 
-  const handleCloudSave = async () => {
+  // حفظ الاسم بدليل الحسابات حتى الأصدقاء يكدرون يلگونك بالبحث
+  const handleSaveName = async () => {
+    const clean = nameDraft.trim().replace(/\s+/g, " ");
+    if (clean.length < 2) {
+      toast.error("اكتب اسمك (حرفين أو أكثر).");
+      return;
+    }
+    if (!account.id) return;
     setIsSaving(true);
     try {
-      toast.success(lang === "ar" ? "🚀 تم مزامنة البيانات سحابيّاً!" : "🚀 Data synced successfully!");
+      const handle =
+        account.handle || "@" + clean.toLowerCase().replace(/\s+/g, "_") + "_" + account.id.slice(0, 4);
+      const { error } = await cloudClient.from("users_directory").upsert([
+        {
+          id: account.id,
+          name: clean,
+          name_en: clean,
+          handle,
+          role: "مستخدم حقيقي",
+          role_en: "Real User",
+          status: "online",
+          last_seen_minutes: 0,
+          accent: "teal",
+        },
+      ]);
+      if (error) throw error;
+      setAccount((prev) => ({ ...prev, name: clean, handle }));
+      await refreshProfile();
+      toast.success("✅ انحفظ اسمك، هسه أصدقاءك يكدرون يلگونك بالبحث");
     } catch (error) {
-      toast.error("❌ Error");
+      console.error("تعذر حفظ الاسم:", error);
+      toast.error("ما گدرنا نحفظ الاسم، جرّب مرة ثانية.");
     } finally {
       setIsSaving(false);
     }
@@ -96,14 +126,30 @@ function AccountPage() {
           </div>
         </div>
 
-        <button
-          type="button"
-          onClick={handleCloudSave}
-          disabled={isSaving}
-          className="w-full rounded-2xl border-2 border-line bg-butter py-3 text-sm font-display font-extrabold text-butter-ink shadow-sm hover:scale-[1.02] transition-all disabled:opacity-50 cursor-pointer shadow-sm hover:bg-butter/90"
-        >
-          {isSaving ? "⏳ لحظة…" : "🔄 مزامنة البيانات"}
-        </button>
+        <div className="rounded-2xl border-2 border-line bg-cream p-4 space-y-2">
+          <label htmlFor="display-name" className="block text-xs font-bold text-ink">
+            اسمك (هذا اللي يبحث عنه أصدقاءك)
+          </label>
+          <div className="flex gap-2">
+            <input
+              id="display-name"
+              type="text"
+              value={nameDraft}
+              onChange={(e) => setNameDraft(e.target.value)}
+              placeholder="مثلاً: علي حسن"
+              maxLength={40}
+              className="min-w-0 flex-1 rounded-xl border border-line bg-paper px-3 py-2 text-sm outline-none focus:border-butter"
+            />
+            <button
+              type="button"
+              onClick={handleSaveName}
+              disabled={isSaving || nameDraft.trim() === account.name.trim()}
+              className="bg-brand shrink-0 rounded-xl px-4 py-2 text-sm font-bold shadow-sm disabled:opacity-50 cursor-pointer"
+            >
+              {isSaving ? "لحظة…" : "حفظ"}
+            </button>
+          </div>
+        </div>
 
         <button
           type="button"
