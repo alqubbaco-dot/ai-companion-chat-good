@@ -31,6 +31,10 @@
   --color-coffee: var(--coffee);
   --color-code-bg: var(--code-bg);
   --color-code-fg: var(--code-fg);
+  --color-brand-from: var(--brand-from);
+  --color-brand-to: var(--brand-to);
+  --color-brand-accent: var(--brand-accent);
+  --color-brand-ink: var(--brand-ink);
 
   /* shadcn compatibility */
   --color-background: var(--paper);
@@ -71,11 +75,16 @@
   --ink: oklch(0.18 0.02 286.0);           /* بنفسجي داكن جداً قريب من الأسود للنصوص الحادة */
   --line: oklch(0.85 0.01 286.0);          /* حدود رمادية خفيفة وعصرية تفصل الواجهات بنقاء */
   --muted-ink: oklch(0.52 0.015 286.0);    /* تدرج رمادي متوسط للنصوص الفرعية والتوقيتات */
-  --butter: oklch(0.65 0.22 295.0);        /* اللون التفاعلي الأرجواني الاحترافي (Cyber Purple) للأزرار النشطة */
+  --butter: oklch(0.58 0.22 275.0);        /* أزرق-بنفسجي مأخوذ من شعار التطبيق للأزرار النشطة */
   --butter-ink: oklch(0.99 0.002 286.0);   /* لون نص أبيض ناصع يظهر بوضوح فوق الأزرار البنفسجية */
   --coral: oklch(0.62 0.21 25.0);          /* لون أحمر مرجاني متناسق لعمليات الإلغاء والحذف */
   --coral-ink: oklch(0.98 0.01 90);
   --teal: oklch(0.62 0.19 240.0);          /* لون أزرق كهربائي (Electric Blue) لإشارات الاتصال والتوفر حياً */
+  /* ألوان الشعار: تدرّج سماوي ← بنفسجي، ولمسة برتقالية */
+  --brand-from: oklch(0.7 0.16 230.0);
+  --brand-to: oklch(0.58 0.25 300.0);
+  --brand-accent: oklch(0.78 0.17 65.0);
+  --brand-ink: oklch(0.99 0.002 286.0);
   --teal-ink: oklch(0.98 0.01 90);
   --coffee: oklch(0.42 0.03 286.0);
   --code-bg: oklch(0.18 0.02 286.0);
@@ -89,12 +98,16 @@
   --ink: oklch(0.96 0.004 286.0);
   --line: oklch(0.28 0.015 286.0);
   --muted-ink: oklch(0.68 0.012 286.0);
-  --butter: oklch(0.72 0.19 295.0);       /* أرجواني مضيء نيون يناسب الوضع المظلم الرقمي */
+  --butter: oklch(0.7 0.18 275.0);        /* أزرق-بنفسجي مضيء يناسب الوضع المظلم */
   --butter-ink: oklch(0.14 0.012 286.0);
   --coral: oklch(0.65 0.18 25.0);
   --coral-ink: oklch(0.14 0.012 286.0);
   --teal: oklch(0.71 0.16 240.0);
   --teal-ink: oklch(0.14 0.012 286.0);
+  --brand-from: oklch(0.66 0.15 230.0);
+  --brand-to: oklch(0.55 0.23 300.0);
+  --brand-accent: oklch(0.78 0.16 65.0);
+  --brand-ink: oklch(0.99 0.002 286.0);
   --coffee: oklch(0.65 0.012 286.0);
   --code-bg: oklch(0.11 0.01 286.0);
   --code-fg: oklch(0.94 0.004 286.0);
@@ -158,4 +171,15 @@
   border-color: var(--line);
   border-radius: var(--radius-2xl);
   background-color: var(--cream);
+}
+
+/* تدرّج ألوان الشعار: للأزرار الرئيسية وفقاعات رسائل المستخدم */
+@utility bg-brand {
+  background-image: linear-gradient(135deg, var(--brand-from), var(--brand-to));
+  color: var(--brand-ink);
+}
+
+/* مسافة آمنة أسفل الشاشة للموبايلات اللي بيها شريط إيماءات */
+@utility pb-safe {
+  padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
 }
