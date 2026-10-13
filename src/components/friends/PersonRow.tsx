@@ -5,6 +5,7 @@ import { useI18n } from "@/lib/i18n";
 import { useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { getOrCreatePrivateConversation } from "@/lib/private-chat";
+import { friendlyDbError } from "@/lib/cloud-friends";
 
 const accentBg: Record<Person["accent"], string> = {
   teal: "bg-teal/20",
@@ -36,7 +37,7 @@ export function PersonRow({
       navigate({ to: "/private-chat/$conversationId", params: { conversationId } });
     } catch (error) {
       console.error("تعذر فتح المحادثة الخاصة:", error);
-      toast.error("لا يمكن فتح محادثة إلا مع صديق مقبول فعلياً.");
+      toast.error(friendlyDbError(error));
     }
   };
 
