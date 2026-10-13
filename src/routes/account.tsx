@@ -7,6 +7,7 @@ import { useI18n } from "@/lib/i18n";
 import { supabase as cloudClient } from "@/lib/supabase";
 import { toast } from "sonner";
 import { useFriends } from "@/lib/friends-store";
+import { friendlyDbError, getMyPhone, saveMyProfile, shareInvite } from "@/lib/cloud-friends";
 
 export const Route = createFileRoute("/account")({
   head: () => ({
@@ -25,6 +26,8 @@ function AccountPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [account, setAccount] = useState({ id: "", name: "", handle: "", email: "" });
   const [nameDraft, setNameDraft] = useState("");
+  const [phone, setPhone] = useState("");
+  const [phoneDraft, setPhoneDraft] = useState("");
   const { refreshProfile } = useFriends();
 
   useEffect(() => {
@@ -49,6 +52,11 @@ function AccountPage() {
           email: user.email || user.phone || "",
         });
         setNameDraft(directoryProfile?.name || "");
+        const saved = await getMyPhone();
+        if (active) {
+          setPhone(saved);
+          setPhoneDraft(saved ? "0" + saved.replace(/^964/, "") : "");
+        }
       }
     };
 
@@ -64,42 +72,39 @@ function AccountPage() {
     return { chatsCount: conversations.length, messagesCount: totalMessages };
   }, [conversations]);
 
-  // حفظ الاسم بدليل الحسابات حتى الأصدقاء يكدرون يلگونك بالبحث
-  const handleSaveName = async () => {
-    const clean = nameDraft.trim().replace(/\s+/g, " ");
-    if (clean.length < 2) {
+  // حفظ الاسم والرقم عن طريق قاعدة البيانات (كل واحد يعدّل نفسه بس)
+  const handleSave = async () => {
+    const cleanName = nameDraft.trim().replace(/\s+/g, " ");
+    const cleanPhone = phoneDraft.trim();
+    if (cleanName.length < 2) {
       toast.error("اكتب اسمك (حرفين أو أكثر).");
       return;
     }
-    if (!account.id) return;
     setIsSaving(true);
     try {
-      const handle =
-        account.handle || "@" + clean.toLowerCase().replace(/\s+/g, "_") + "_" + account.id.slice(0, 4);
-      const { error } = await cloudClient.from("users_directory").upsert([
-        {
-          id: account.id,
-          name: clean,
-          name_en: clean,
-          handle,
-          role: "مستخدم حقيقي",
-          role_en: "Real User",
-          status: "online",
-          last_seen_minutes: 0,
-          accent: "teal",
-        },
-      ]);
-      if (error) throw error;
-      setAccount((prev) => ({ ...prev, name: clean, handle }));
+      const result = await saveMyProfile(cleanName, cleanPhone || null);
+      setAccount((prev) => ({ ...prev, name: cleanName }));
+      if (result?.phone) setPhone(result.phone);
       await refreshProfile();
-      toast.success("✅ انحفظ اسمك، هسه أصدقاءك يكدرون يلگونك بالبحث");
+      toast.success("✅ انحفظ. هسه أصدقاءك يكدرون يلگونك بالاسم أو برقمك");
     } catch (error) {
-      console.error("تعذر حفظ الاسم:", error);
-      toast.error("ما گدرنا نحفظ الاسم، جرّب مرة ثانية.");
+      console.error("تعذر حفظ الملف الشخصي:", error);
+      toast.error(friendlyDbError(error));
     } finally {
       setIsSaving(false);
     }
   };
+
+  const handleInvite = async () => {
+    if (!account.id) return;
+    const result = await shareInvite(account.id, account.name);
+    if (result === "copied") toast.success("📋 انسخ رابط الدعوة، الصقه لصديقك بالواتساب");
+    else if (result === "failed") toast.error("ما گدرنا ننسخ الرابط");
+  };
+
+  const unchanged =
+    nameDraft.trim() === account.name.trim() &&
+    phoneDraft.replace(/\D/g, "").replace(/^0/, "964") === phone;
 
   return (
     <PageBody title={t("accountTitle") || "حسابي"} subtitle={t("accountSubtitle") || "بياناتك محفوظة بأمان سحابي."}>
@@ -126,11 +131,11 @@ function AccountPage() {
           </div>
         </div>
 
-        <div className="rounded-2xl border-2 border-line bg-cream p-4 space-y-2">
-          <label htmlFor="display-name" className="block text-xs font-bold text-ink">
-            اسمك (هذا اللي يبحث عنه أصدقاءك)
-          </label>
-          <div className="flex gap-2">
+        <div className="rounded-2xl border-2 border-line bg-cream p-4 space-y-3">
+          <div className="space-y-1">
+            <label htmlFor="display-name" className="block text-xs font-bold text-ink">
+              اسمك
+            </label>
             <input
               id="display-name"
               type="text"
@@ -138,18 +143,42 @@ function AccountPage() {
               onChange={(e) => setNameDraft(e.target.value)}
               placeholder="مثلاً: علي حسن"
               maxLength={40}
-              className="min-w-0 flex-1 rounded-xl border border-line bg-paper px-3 py-2 text-sm outline-none focus:border-butter"
+              className="w-full rounded-xl border border-line bg-paper px-3 py-2 text-sm outline-none focus:border-butter"
             />
-            <button
-              type="button"
-              onClick={handleSaveName}
-              disabled={isSaving || nameDraft.trim() === account.name.trim()}
-              className="bg-brand shrink-0 rounded-xl px-4 py-2 text-sm font-bold shadow-sm disabled:opacity-50 cursor-pointer"
-            >
-              {isSaving ? "لحظة…" : "حفظ"}
-            </button>
           </div>
+          <div className="space-y-1">
+            <label htmlFor="phone" className="block text-xs font-bold text-ink">
+              رقم موبايلك <span className="font-normal text-muted-ink">(ما يظهر لأحد، بس حتى أصدقاءك يلگونك)</span>
+            </label>
+            <input
+              id="phone"
+              type="tel"
+              inputMode="tel"
+              dir="ltr"
+              value={phoneDraft}
+              onChange={(e) => setPhoneDraft(e.target.value)}
+              placeholder="07701234567"
+              maxLength={20}
+              className="w-full rounded-xl border border-line bg-paper px-3 py-2 text-left text-sm outline-none focus:border-butter"
+            />
+          </div>
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={isSaving || unchanged}
+            className="bg-brand w-full rounded-xl py-2.5 text-sm font-bold shadow-sm disabled:opacity-50 cursor-pointer"
+          >
+            {isSaving ? "لحظة…" : "حفظ"}
+          </button>
         </div>
+
+        <button
+          type="button"
+          onClick={handleInvite}
+          className="flex w-full items-center justify-center gap-2 rounded-2xl border-2 border-line bg-cream py-3 text-sm font-display font-extrabold text-ink transition-colors hover:bg-ink/5 cursor-pointer"
+        >
+          📨 ادعُ صديق للتطبيق
+        </button>
 
         <button
           type="button"

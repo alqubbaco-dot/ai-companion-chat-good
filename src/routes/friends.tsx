@@ -5,7 +5,7 @@ import { PageBody } from "@/components/app/AppShell";
 import { PersonRow, RowButton } from "@/components/friends/PersonRow";
 import { useFriends } from "@/lib/friends-store";
 import { useI18n } from "@/lib/i18n";
-import { searchCloudUsers, type CloudUser } from "@/lib/cloud-friends";
+import { searchCloudUsers, shareInvite, type CloudUser } from "@/lib/cloud-friends";
 
 export const Route = createFileRoute("/friends")({
   head: () => ({
@@ -84,9 +84,30 @@ function FriendsPage() {
     }
   };
 
+  const handleInvite = async () => {
+    if (!profile.id) return;
+    const result = await shareInvite(profile.id, profile.name);
+    if (result === "copied") toast.success("📋 انسخ رابط الدعوة، الصقه لصديقك بالواتساب");
+    else if (result === "failed") toast.error("ما گدرنا ننسخ الرابط");
+  };
+
   return (
     <PageBody title={t("friendsTitle")} subtitle={t("friendsSubtitle")}>
       <div className="mx-auto w-full max-w-3xl space-y-6">
+        <button
+          type="button"
+          onClick={handleInvite}
+          className="bg-brand flex w-full items-center gap-3 rounded-2xl p-4 text-start shadow-sm transition-transform hover:scale-[1.01] cursor-pointer"
+        >
+          <span className="text-2xl">📨</span>
+          <span className="min-w-0 flex-1">
+            <span className="block font-display text-sm font-extrabold">ادعُ صديق برابط</span>
+            <span className="block text-[11.5px] opacity-90">
+              أرسله بالواتساب، وأول ما يفتحه ويسجّل تصيرون أصدقاء تلقائياً
+            </span>
+          </span>
+        </button>
+
         <div className="flex items-center gap-2 rounded-2xl border-2 border-line bg-cream px-3 py-2">
           <span>🔍</span>
           <input
@@ -95,7 +116,7 @@ function FriendsPage() {
             placeholder={t("searchUsers")}
             className="w-full bg-transparent text-sm outline-none placeholder:text-muted-ink/70"
           />
-          {isSearching && <span className="text-xs text-muted-ink animate-pulse">جاري جلب السحاب...</span>}
+          {isSearching && <span className="shrink-0 text-xs text-muted-ink animate-pulse">لحظة…</span>}
         </div>
 
         {query.trim() ? (

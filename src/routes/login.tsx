@@ -4,6 +4,7 @@ import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useFriends } from "@/lib/friends-store"; 
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
+import { friendlyDbError, saveMyProfile } from "@/lib/cloud-friends";
 
 export const Route = createFileRoute("/login")({
   component: LoginPage,
@@ -19,6 +20,7 @@ function LoginPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [phone, setPhone] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleLoginSubmit = async (e: React.FormEvent) => {
@@ -63,33 +65,17 @@ function LoginPage() {
         }
 
           authUserId = authData.user?.id || "";
-          if (authData.user) {
-          const generatedHandle = "@" + finalName.toLowerCase().replace(/\s+/g, "_") + "_" + cleanEmail.split('@')[0].slice(-3);
-          
-          const cloudPayload = {
-            id: authData.user.id, // استخدام الـ UID الشرعي والمولد من نظام الأمان
-            name: finalName,
-            name_en: finalName,
-            handle: generatedHandle,
-            role: "مستخدم حقيقي",
-            role_en: "Real User",
-            status: "online",
-            last_seen_minutes: 0,
-            accent: "teal",
-            phone: null // ترك حقل الهاتف مؤقتاً تلبية لخطتك الاستراتيجية
-          };
-
-          // 🟢 2. قذف وحفر سجلات الحساب تلقائياً داخل جدول دليل الحسابات
-          const { error: dbError } = await supabase
-            .from("users_directory")
-            .upsert([cloudPayload]);
-
-            if (dbError) {
-              toast.error(`ما گدرنا نحفظ الحساب: ${dbError.message}`);
-              setIsSubmitting(false);
-              return;
+          if (authData.user && authData.session) {
+            // نحفظ الاسم والرقم عن طريق قاعدة البيانات. إذا فشل ما نوقف التسجيل،
+            // لأن السجل ينسوّى تلقائياً بأول دخول، والمستخدم يكدر يعدّله من حسابي
+            try {
+              await saveMyProfile(finalName, phone.trim() || null);
+            } catch (profileError) {
+              console.error("تعذر حفظ الملف الشخصي وقت التسجيل:", profileError);
+              const message = friendlyDbError(profileError);
+              if (message.includes("الرقم")) toast.error(message);
             }
-        }
+          }
       } else {
         // 🔐 في حالة تسجيل دخول مسجل قديم، المطابقة والعبور الصارم بالإيميل والرمز
         const { data: authData, error: signInError } = await supabase.auth.signInWithPassword({
@@ -185,6 +171,24 @@ function LoginPage() {
                 onChange={(e) => setName(e.target.value)}
                 placeholder="مثلاً: علي حسن"
                 className="w-full rounded-xl border border-line bg-paper px-3 py-2 text-sm outline-none focus:border-butter"
+              />
+            </div>
+          )}
+
+          {mode === "signup" && (
+            <div className="space-y-1 animate-fade-in">
+              <label className="text-xs font-bold text-ink">
+                رقم موبايلك <span className="font-normal text-muted-ink">(اختياري، حتى أصدقاءك يلگونك)</span>
+              </label>
+              <input
+                type="tel"
+                inputMode="tel"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="07701234567"
+                className="w-full rounded-xl border border-line bg-paper px-3 py-2 text-sm outline-none focus:border-butter text-left"
+                dir="ltr"
+                autoComplete="tel"
               />
             </div>
           )}

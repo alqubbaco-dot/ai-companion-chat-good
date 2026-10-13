@@ -19,6 +19,7 @@ import { ChatProvider } from "@/lib/chat-store";
 import { AppShell } from "@/components/app/AppShell";
 import { Toaster } from "@/components/ui/sonner";
 import { PwaManager } from "@/components/app/PwaManager";
+import { InviteHandler } from "@/components/app/InviteHandler";
 
 function NotFoundComponent() {
   return (
@@ -190,6 +191,7 @@ function RootComponent() {
               </CloudSecurityGateway>
               <Toaster position="top-center" />
               <PwaManager />
+              <InviteHandler />
             </ChatProvider>
           </FriendsProvider>
         </ThemeProvider>
