@@ -78,7 +78,8 @@ export const askGemini = createServerFn({ method: "POST" })
   })
   .handler(async ({ data }): Promise<AskResult> => {
     const env = typeof process !== "undefined" ? process.env : {};
-    const apiKey = env.GEMINI_API_KEY || env.VITE_GEMINI_API_KEY || "";
+    // لا تسمّيه VITE_GEMINI_API_KEY: أي متغير يبدأ بـ VITE_ ينكشف بالمتصفح
+    const apiKey = env.GEMINI_API_KEY?.trim() || "";
     if (!apiKey) {
       return { ok: false, error: "missing_key: GEMINI key is not set in Vercel" };
     }
