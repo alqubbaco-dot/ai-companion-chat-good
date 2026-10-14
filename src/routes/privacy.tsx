@@ -63,6 +63,13 @@ function PrivacyPage() {
               <li>
                 <b>معرّف الجهاز للإشعارات:</b> رمز تقني يخلّينا نرسل لتلفونك إشعارات المكالمات والرسائل.
               </li>
+              <li>
+                <b>معرّف الإعلانات ومعلومات الجهاز:</b> تجمعها خدمة Google AdMob داخل تطبيق الأندرويد حتى تعرض
+                الإعلانات وتقيس أداءها.
+              </li>
+              <li>
+                <b>سجل النقاط:</b> عدد الإعلانات اللي كمّلتها، رصيد نقاطك، والميزات اللي فتحتها بالنقاط.
+              </li>
             </ul>
           </Section>
 
@@ -79,10 +86,16 @@ function PrivacyPage() {
               <li>حتى يشتغل التطبيق: تسجيل الدخول، الأصدقاء، الرسائل، والمكالمات.</li>
               <li>حتى نرسل لك إشعار من يتصل بيك صديق أو يرسلك رسالة.</li>
               <li>حتى يجاوبك المساعد الذكي على أسئلتك.</li>
+              <li>حتى نحسب نقاطك ونفتح لك الميزات اللي تختارها.</li>
               <li>حتى نحمي الحسابات ونمنع إساءة الاستخدام.</li>
             </ul>
             <p>
-              <b>ما نبيع بياناتك لأي أحد</b>، وما نستخدمها لإعلانات موجّهة لك شخصياً.
+              <b>الإعلانات:</b> تطبيق الأندرويد يعرض <b>إعلانات بمكافأة</b> عن طريق Google AdMob، وبس لما إنت تضغط
+              «اربح نقطة». Google ممكن تستخدم معرّف الإعلانات بجهازك حتى تعرض إعلانات تناسبك. تكدر توقف الإعلانات
+              المخصصة أو تمسح معرّف الإعلانات بأي وقت من إعدادات التلفون: <b>الإعدادات ← Google ← الإعلانات</b>.
+            </p>
+            <p>
+              <b>ما نبيع بياناتك لأي أحد</b>، وما نشارك ويا المعلنين رسائلك أو مكالماتك أو رقم هاتفك.
             </p>
           </Section>
 
@@ -100,6 +113,18 @@ function PrivacyPage() {
               <li>
                 <b>Vercel:</b> لاستضافة التطبيق.
               </li>
+              <li>
+                <b>Google AdMob:</b> لعرض الإعلانات بمكافأة. شلون تستخدم Google البيانات:{" "}
+                <a
+                  className="underline"
+                  dir="ltr"
+                  href="https://policies.google.com/technologies/partner-sites"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  policies.google.com/technologies/partner-sites
+                </a>
+              </li>
             </ul>
             <p>كل خدمة من هذني تتعامل ويا البيانات حسب سياسة الخصوصية الخاصة بيها.</p>
           </Section>
@@ -113,7 +138,7 @@ function PrivacyPage() {
 
           <Section title="6. حذف الحساب والبيانات" id="delete-account">
             <p>
-              تكدر تحذف حسابك وكل بياناتك (الملف الشخصي، الأصدقاء، الرسائل، سجل المكالمات) بنفسك بأي وقت: من
+              تكدر تحذف حسابك وكل بياناتك (الملف الشخصي، الأصدقاء، الرسائل، سجل المكالمات، النقاط والميزات المفتوحة) بنفسك بأي وقت: من
               التطبيق افتح <b>حسابي</b> ← <b>حذف الحساب نهائياً</b>. الحذف فوري ونهائي. وإذا ما تكدر تدخل للتطبيق،
               راسلنا على <b dir="ltr">{CONTACT}</b> واذكر رقم هاتفك المسجّل، ونحذف البيانات خلال 30 يوم كحد أقصى.
             </p>
@@ -142,8 +167,10 @@ function PrivacyPage() {
             <p>
               <b>Data we collect:</b> your phone number (for sign-in and friend search), profile details you enter
               (name, username, bio), your friends list, the text of private messages you exchange with friends,
-              questions you send to the in-app AI assistant, and a device token used to deliver call and message
-              notifications.
+              questions you send to the in-app AI assistant, a device token used to deliver call and message
+              notifications, your points record (rewarded ads completed, points balance, features unlocked), and —
+              through Google AdMob in the Android app — your device's advertising ID and device information used to
+              serve and measure ads.
             </p>
             <p>
               <b>Calls:</b> voice and video calls are peer-to-peer (WebRTC). We do not record calls or store any
@@ -151,19 +178,30 @@ function PrivacyPage() {
             </p>
             <p>
               <b>How we use data:</b> to provide the app (sign-in, friends, messaging, calls), to notify you of
-              incoming calls and messages, to answer your AI assistant questions, and to protect accounts. We do
-              not sell your data or use it for personalized advertising.
+              incoming calls and messages, to answer your AI assistant questions, to track your points and unlocked
+              features, and to protect accounts. We do not sell your data, and we never share your messages, calls or
+              phone number with advertisers.
+            </p>
+            <p>
+              <b>Ads:</b> the Android app shows <b>rewarded ads</b> through Google AdMob, only when you tap "Earn a
+              point". Google may use your device's advertising ID to show ads that are relevant to you. You can opt out
+              of personalized ads or delete your advertising ID at any time in your phone's settings (Settings → Google
+              → Ads). See how Google uses data:{" "}
+              <a className="underline" href="https://policies.google.com/technologies/partner-sites" target="_blank" rel="noreferrer">
+                policies.google.com/technologies/partner-sites
+              </a>
+              .
             </p>
             <p>
               <b>Service providers:</b> Supabase (accounts, messages, call signaling), Google Firebase Cloud
-              Messaging (notifications), Google Gemini (AI assistant replies), and Vercel (hosting).
+              Messaging (notifications), Google Gemini (AI assistant replies), Google AdMob (rewarded ads), and Vercel (hosting).
             </p>
             <p>
               <b>Security:</b> data is encrypted in transit (HTTPS) and database access is restricted so each user
               can only read their own conversations and friends.
             </p>
             <p>
-              <b>Account and data deletion:</b> you can delete your account and all associated data yourself at
+              <b>Account and data deletion:</b> you can delete your account and all associated data (including points and unlocked features) yourself at
               any time from the app: open <b>My account</b> → <b>Delete account permanently</b>. Deletion is immediate
               and permanent. If you cannot access the app, email <b>{CONTACT}</b> with your registered phone number and
               we will delete the data within 30 days.
