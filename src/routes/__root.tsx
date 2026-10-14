@@ -144,6 +144,8 @@ function CloudSecurityGateway({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!hydrated) return;
+    // صفحات عامة تنفتح بدون تسجيل دخول (مثل سياسة الخصوصية لـ Google Play)
+    if (currentPath === "/privacy") return;
     if (!isRegistered && currentPath !== "/login") {
       router.navigate({ to: "/login" });
     } else if (isRegistered && currentPath === "/login") {

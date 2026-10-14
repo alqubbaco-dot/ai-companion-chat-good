@@ -14,6 +14,7 @@ import { toast } from "sonner";
 import { supabase } from "./supabase";
 import { useFriends } from "./friends-store";
 import { notifyFriend } from "./push-client";
+import { saveCallLog, type CallStatus } from "./call-logs";
 
 /*
  * الاتصال الصوتي بين الأصدقاء (WebRTC)
@@ -184,6 +185,11 @@ export function CallProvider({ children }: { children: ReactNode }) {
   const ringTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   // المستخدم ضغط "رد" من شاشة الأندرويد: نرد تلقائياً أول ما توصل الدعوة
   const autoAcceptRef = useRef<string | null>(null);
+  // سجل المكالمة: متى بدت، متى انردّت، وشنو صار بيها
+  const startedAtRef = useRef<string>(new Date().toISOString());
+  const answeredAtRef = useRef<number | null>(null);
+  const outcomeRef = useRef<CallStatus | null>(null);
+  const loggedRef = useRef<string | null>(null);
   const acceptCallRef = useRef<() => Promise<void>>(async () => undefined);
   const relationOfRef = useRef(relationOf);
   relationOfRef.current = relationOf;
@@ -234,6 +240,24 @@ export function CallProvider({ children }: { children: ReactNode }) {
   // ── تنظيف كل شي بعد انتهاء المكالمة ──
   const cleanup = useCallback(
     (reason: string | null) => {
+      // المتصل يسجّل المكالمة بالسجل (مرة وحدة لكل مكالمة)
+      const ended = callRef.current;
+      if (ended && ended.direction === "out" && myId && loggedRef.current !== ended.callId) {
+        loggedRef.current = ended.callId;
+        const answeredAt = answeredAtRef.current;
+        const status: CallStatus = answeredAt ? "answered" : outcomeRef.current ?? "missed";
+        void saveCallLog({
+          callId: ended.callId,
+          callerId: myId,
+          calleeId: ended.peerId,
+          video: ended.video,
+          status,
+          durationSeconds: answeredAt ? (Date.now() - answeredAt) / 1000 : 0,
+          startedAt: startedAtRef.current,
+        });
+      }
+      answeredAtRef.current = null;
+      outcomeRef.current = null;
       clearTimeout(ringTimeoutRef.current);
       ringerRef.current?.stop();
       ringerRef.current = null;
@@ -270,7 +294,7 @@ export function CallProvider({ children }: { children: ReactNode }) {
         updatePhase("idle");
       }
     },
-    [updatePhase],
+    [myId, updatePhase],
   );
 
   // ── إنشاء اتصال WebRTC ──
@@ -300,9 +324,11 @@ export function CallProvider({ children }: { children: ReactNode }) {
         if (state === "connected") {
           ringerRef.current?.stop();
           clearTimeout(ringTimeoutRef.current);
+          if (!answeredAtRef.current) answeredAtRef.current = Date.now();
           updatePhase("active");
         } else if (state === "failed") {
           void sendSignal({ type: "hangup", callId: info.callId, from: myId });
+          if (!answeredAtRef.current) outcomeRef.current = "failed";
           cleanup("تعذر ربط المكالمة بين الجهازين (الشبكة تمنع الاتصال)");
         } else if (state === "disconnected") {
           // ننطي فرصة قصيرة يرجع الاتصال
@@ -387,6 +413,9 @@ export function CallProvider({ children }: { children: ReactNode }) {
         return;
       }
       const info: CallInfo = { callId: newCallId(), peerId, peerName, direction: "out", video };
+      startedAtRef.current = new Date().toISOString();
+      answeredAtRef.current = null;
+      outcomeRef.current = null;
       callRef.current = info;
       setCall(info);
       setSeconds(0);
@@ -441,6 +470,7 @@ export function CallProvider({ children }: { children: ReactNode }) {
         }, RING_TIMEOUT_MS);
       } catch (err) {
         console.error("فشل بدء المكالمة:", err);
+        loggedRef.current = info.callId; // المكالمة ما بدت أصلاً: ما نسجّلها
         const name = err instanceof DOMException ? err.name : "";
         cleanup(
           name === "NotAllowedError"
@@ -501,7 +531,10 @@ export function CallProvider({ children }: { children: ReactNode }) {
     const info = callRef.current;
     if (!info) return;
     void sendSignal({ type: "hangup", callId: info.callId, from: myId });
-    if (phaseRef.current === "outgoing") notifyMissed(info);
+    if (phaseRef.current === "outgoing") {
+      notifyMissed(info);
+      outcomeRef.current = "cancelled";
+    }
     cleanup("انتهت المكالمة");
   }, [cleanup, myId, notifyMissed, sendSignal]);
 
@@ -671,6 +704,7 @@ export function CallProvider({ children }: { children: ReactNode }) {
       }
 
       if (signal.type === "reject") {
+        outcomeRef.current = signal.reason === "busy" ? "busy" : "declined";
         cleanup(signal.reason === "busy" ? "الخط مشغول" : "رفض المكالمة");
         return;
       }

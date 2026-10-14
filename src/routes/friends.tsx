@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { PageBody } from "@/components/app/AppShell";
 import { PersonRow, RowButton } from "@/components/friends/PersonRow";
@@ -178,6 +178,15 @@ function FriendsPage() {
   return (
     <PageBody title={t("friendsTitle")} subtitle={t("friendsSubtitle")}>
       <div className="mx-auto w-full max-w-3xl space-y-6">
+        <Link
+          to="/calls"
+          className="flex w-full items-center gap-3 rounded-2xl border-2 border-line bg-cream p-3 text-start transition-colors hover:bg-line/10"
+        >
+          <span className="text-xl">🕘</span>
+          <span className="min-w-0 flex-1 font-display text-sm font-extrabold">سجل المكالمات</span>
+          <span className="text-muted-ink">←</span>
+        </Link>
+
         <button
           type="button"
           onClick={handleInvite}

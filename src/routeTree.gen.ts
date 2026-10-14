@@ -14,6 +14,8 @@ import { Route as AccountRouteImport } from './routes/account'
 import { Route as ChatsRouteImport } from './routes/chats'
 import { Route as FriendsRouteImport } from './routes/friends'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as PrivacyRouteImport } from './routes/privacy'
+import { Route as CallsRouteImport } from './routes/calls'
 import { Route as RequestsRouteImport } from './routes/requests'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as ChatChatIdRouteImport } from './routes/chat.$chatId'
@@ -44,6 +46,16 @@ const LoginRoute = LoginRouteImport.update({
   path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CallsRoute = CallsRouteImport.update({
+  id: '/calls',
+  path: '/calls',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PrivacyRoute = PrivacyRouteImport.update({
+  id: '/privacy',
+  path: '/privacy',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const RequestsRoute = RequestsRouteImport.update({
   id: '/requests',
   path: '/requests',
@@ -72,6 +84,8 @@ export interface FileRoutesByFullPath {
   '/chats': typeof ChatsRoute
   '/friends': typeof FriendsRoute
   '/login': typeof LoginRoute
+  '/privacy': typeof PrivacyRoute
+  '/calls': typeof CallsRoute
   '/requests': typeof RequestsRoute
   '/settings': typeof SettingsRoute
   '/chat/$chatId': typeof ChatChatIdRoute
@@ -83,6 +97,8 @@ export interface FileRoutesByTo {
   '/chats': typeof ChatsRoute
   '/friends': typeof FriendsRoute
   '/login': typeof LoginRoute
+  '/privacy': typeof PrivacyRoute
+  '/calls': typeof CallsRoute
   '/requests': typeof RequestsRoute
   '/settings': typeof SettingsRoute
   '/chat/$chatId': typeof ChatChatIdRoute
@@ -95,6 +111,8 @@ export interface FileRoutesById {
   '/chats': typeof ChatsRoute
   '/friends': typeof FriendsRoute
   '/login': typeof LoginRoute
+  '/privacy': typeof PrivacyRoute
+  '/calls': typeof CallsRoute
   '/requests': typeof RequestsRoute
   '/settings': typeof SettingsRoute
   '/chat/$chatId': typeof ChatChatIdRoute
@@ -108,6 +126,8 @@ export interface FileRouteTypes {
     | '/chats'
     | '/friends'
     | '/login'
+    | '/privacy'
+    | '/calls'
     | '/requests'
     | '/settings'
     | '/chat/$chatId'
@@ -119,6 +139,8 @@ export interface FileRouteTypes {
     | '/chats'
     | '/friends'
     | '/login'
+    | '/privacy'
+    | '/calls'
     | '/requests'
     | '/settings'
     | '/chat/$chatId'
@@ -130,6 +152,8 @@ export interface FileRouteTypes {
     | '/chats'
     | '/friends'
     | '/login'
+    | '/privacy'
+    | '/calls'
     | '/requests'
     | '/settings'
     | '/chat/$chatId'
@@ -142,6 +166,8 @@ export interface RootRouteChildren {
   ChatsRoute: typeof ChatsRoute
   FriendsRoute: typeof FriendsRoute
   LoginRoute: typeof LoginRoute
+  PrivacyRoute: typeof PrivacyRoute
+  CallsRoute: typeof CallsRoute
   RequestsRoute: typeof RequestsRoute
   SettingsRoute: typeof SettingsRoute
   ChatChatIdRoute: typeof ChatChatIdRoute
@@ -185,6 +211,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/calls': {
+      id: '/calls'
+      path: '/calls'
+      fullPath: '/calls'
+      preLoaderRoute: typeof CallsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/privacy': {
+      id: '/privacy'
+      path: '/privacy'
+      fullPath: '/privacy'
+      preLoaderRoute: typeof PrivacyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/requests': {
       id: '/requests'
       path: '/requests'
@@ -222,6 +262,8 @@ const rootRouteChildren: RootRouteChildren = {
   ChatsRoute: ChatsRoute,
   FriendsRoute: FriendsRoute,
   LoginRoute: LoginRoute,
+  PrivacyRoute: PrivacyRoute,
+  CallsRoute: CallsRoute,
   RequestsRoute: RequestsRoute,
   SettingsRoute: SettingsRoute,
   ChatChatIdRoute: ChatChatIdRoute,
