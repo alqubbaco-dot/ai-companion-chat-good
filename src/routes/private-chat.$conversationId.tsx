@@ -5,7 +5,7 @@ import { useFriends } from "@/lib/friends-store";
 import { useCall } from "@/lib/call-store";
 import { notifyFriend } from "@/lib/push-client";
 import { AudioBubble, ImageBubble, formatDuration } from "@/components/chat/MediaBubbles";
-import { MAX_VOICE_SECONDS, useVoiceRecorder, type VoiceResult } from "@/lib/use-voice-recorder";
+import { useVoiceRecorder, type VoiceResult } from "@/lib/use-voice-recorder";
 import {
   compressImage,
   sendMediaMessage,
@@ -281,17 +281,17 @@ function PrivateChatPage() {
 
         {voiceActive ? (
           // شريط التسجيل مثل الواتساب
-          <div className="flex min-h-11 flex-1 items-center gap-3 rounded-3xl border-2 border-coral/50 bg-paper px-4">
+          <div className="flex min-h-11 min-w-0 flex-1 items-center gap-2 overflow-hidden rounded-3xl border-2 border-coral/50 bg-paper px-3">
             <span className="size-2.5 animate-pulse rounded-full bg-red-500" />
             <span className="font-mono text-sm font-bold">{formatDuration(recorder.elapsed)}</span>
             <span className={`min-w-0 flex-1 truncate text-[12px] ${cancelHint ? "font-bold text-coral" : "text-muted-ink"}`}>
               {!recorder.recording
                 ? "جاري تشغيل المايك…"
                 : voiceLocked
-                  ? "ديسجّل… اضغط ➤ حتى ترسل"
+                  ? "ديسجّل…"
                   : cancelHint
                     ? "شيل إصبعك حتى تلغي ✕"
-                    : `اسحب للجنب حتى تلغي · أقصى ${MAX_VOICE_SECONDS / 60} دقيقة`}
+                    : "اسحب للجنب حتى تلغي"}
             </span>
             {voiceLocked && (
               <button
