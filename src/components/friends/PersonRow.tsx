@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import type { Person } from "@/lib/friends-store";
 import { useI18n } from "@/lib/i18n";
 import { useNavigate } from "@tanstack/react-router";
@@ -55,34 +55,79 @@ export function PersonRow({
     }
   };
 
+  // صف الصديق مثل الواتساب: الاسم كامل بدون أزرار، الضغط يفتح الدردشة (وبيها أزرار الاتصال)،
+  // والضغط المطوّل يطلّع الخيارات (حذف/حظر). غير الأصدقاء تبقى أزرارهم (مثل إرسال طلب) ظاهرة.
+  const isFriendRow = showQuickActions;
+  const pressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const longPressed = useRef(false);
+
+  const clearPress = () => {
+    if (pressTimer.current) clearTimeout(pressTimer.current);
+    pressTimer.current = null;
+  };
+
+  const startPress = () => {
+    if (!isFriendRow || !children) return;
+    longPressed.current = false;
+    clearPress();
+    pressTimer.current = setTimeout(() => {
+      longPressed.current = true;
+      setShowOptions(true);
+      if (typeof navigator !== "undefined" && "vibrate" in navigator) navigator.vibrate?.(30);
+    }, 500);
+  };
+
+  const onRowClick = () => {
+    if (longPressed.current) {
+      longPressed.current = false;
+      return;
+    }
+    if (showOptions) {
+      setShowOptions(false);
+      return;
+    }
+    void handleCardClick();
+  };
+
+  // onCall ما عاد يُستعمل بالصف (أزرار الاتصال بصفحة الدردشة)
+  void onCall;
+
   return (
-    <div className="relative flex animate-rise items-center gap-3 rounded-2xl border-2 border-line/60 p-3 transition-colors hover:border-line bg-cream/30">
-      
-      {/* منطقة الصديق القابلة للضغط لبدء المراسلة الفورية */}
-      <div 
-        onClick={handleCardClick}
-        className="flex flex-1 items-center gap-3 cursor-pointer min-w-0"
-        title="اضغط للمراسلة الفورية"
+    <div className="relative animate-rise rounded-2xl border-2 border-line/60 bg-cream/30 transition-colors hover:border-line">
+      <div
+        onClick={onRowClick}
+        onPointerDown={startPress}
+        onPointerUp={clearPress}
+        onPointerLeave={clearPress}
+        onPointerCancel={clearPress}
+        onContextMenu={(e) => {
+          if (!isFriendRow || !children) return;
+          e.preventDefault();
+          clearPress();
+          setShowOptions(true);
+        }}
+        className="flex cursor-pointer select-none items-center gap-3 p-3"
+        title={isFriendRow ? "اضغط للمراسلة · اضغط مطوّلاً للخيارات" : undefined}
       >
         <div className="relative shrink-0">
-          <div className={`grid size-11 place-items-center rounded-full font-display font-bold ${accentBg[person.accent]}`}>
+          <div className={`grid size-12 place-items-center rounded-full font-display text-lg font-bold ${accentBg[person.accent]}`}>
             {name.charAt(0)}
           </div>
           <span className={`absolute -bottom-0.5 -start-0.5 size-3.5 rounded-full ring-2 ring-cream ${isOnline ? "bg-emerald-500" : "bg-ink/25"}`} />
         </div>
-        
+
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <p className="min-w-0 flex-1 truncate text-sm font-semibold text-ink hover:text-teal transition-colors">{name}</p>
+          <div className="flex items-start gap-2">
+            <p className="line-clamp-2 min-w-0 flex-1 break-words text-[15px] font-bold leading-snug text-ink">{name}</p>
             {lastTime ? (
-              <span className={`shrink-0 text-[10.5px] ${unread > 0 ? "font-bold text-emerald-600" : "text-muted-ink"}`}>
+              <span className={`shrink-0 pt-0.5 text-[11px] ${unread > 0 ? "font-bold text-emerald-600" : "text-muted-ink"}`}>
                 {lastTime}
               </span>
             ) : null}
           </div>
           <div className="flex items-center gap-2">
-            <p className={`min-w-0 flex-1 truncate text-[12px] ${unread > 0 ? "font-semibold text-ink" : "text-muted-ink"}`}>
-              {lastMessage ?? note ?? `${person.handle} · ${role}`}
+            <p className={`min-w-0 flex-1 truncate text-[13px] ${unread > 0 ? "font-semibold text-ink" : "text-muted-ink"}`}>
+              {lastMessage ?? note ?? (isOnline ? t("online") : `${person.handle} · ${role}`)}
             </p>
             {unread > 0 ? (
               <span className="grid min-w-5 shrink-0 place-items-center rounded-full bg-emerald-500 px-1.5 text-[10.5px] font-bold leading-5 text-white">
@@ -90,66 +135,31 @@ export function PersonRow({
               </span>
             ) : null}
           </div>
-          <p className={`text-[11px] font-semibold ${isOnline ? "text-emerald-600" : "text-muted-ink"}`}>
-            {isOnline ? t("online") : t("offline")}
-          </p>
         </div>
-      </div>
-      
-      {/* منطقة الأزرار: تم تنظيفها من أزرار الاتصال المكررة لتبقى فقط أزرار الإعدادات الناعمة */}
-      <div className="flex shrink-0 items-center gap-1.5 z-10">
-        {showQuickActions ? (
-          <>
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                void handleCardClick();
-              }}
-              className="grid size-9 place-items-center rounded-full border-2 border-line bg-cream hover:bg-line/20 transition-colors cursor-pointer"
-              title="رسالة"
-              aria-label="رسالة"
-            >
-              💬
-            </button>
-            {onCall ? (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onCall(person.id);
-                }}
-                className="grid size-9 place-items-center rounded-full border-2 border-line bg-cream hover:bg-line/20 transition-colors cursor-pointer"
-                title="اتصال"
-                aria-label="اتصال"
-              >
-                📞
-              </button>
-            ) : null}
-          </>
-        ) : null}
-        {/* زر الترس الدائري والناعم لعزل الحظر والحذف مثل خيارات الواتساب */}
-        <button
-          onClick={() => setShowOptions(!showOptions)}
-          className={`p-2 rounded-full border-2 border-line bg-cream hover:bg-line/20 transition-colors cursor-pointer font-bold text-xs ${showOptions ? 'bg-line/20' : ''}`}
-          title="خيارات إضافية"
-        >
-          ⚙️
-        </button>
 
-        {/* قائمة الخيارات الفرعية المنبثقة النظيفة */}
-        {showOptions && (
-          <div className="absolute left-3 top-14 z-50 rounded-2xl border-2 border-line bg-cream p-1.5 shadow-xl animate-pop flex items-center gap-1">
+        {/* غير الأصدقاء: أزرارهم (إرسال طلب، قبول...) تبقى ظاهرة */}
+        {!isFriendRow && children ? (
+          <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
             {children}
-            <button 
-              onClick={() => setShowOptions(false)}
-              className="text-[10px] font-bold px-2 py-1 border border-line rounded-xl hover:bg-ink/5"
-            >
-              ✕
-            </button>
           </div>
-        )}
+        ) : null}
       </div>
+
+      {/* خيارات الصديق بعد الضغط المطوّل */}
+      {isFriendRow && showOptions ? (
+        <div
+          className="flex animate-pop flex-wrap items-center gap-1.5 border-t-2 border-line/40 px-3 py-2"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {children}
+          <button
+            onClick={() => setShowOptions(false)}
+            className="ms-auto rounded-xl border border-line px-2 py-1 text-[11px] font-bold hover:bg-ink/5"
+          >
+            ✕
+          </button>
+        </div>
+      ) : null}
     </div>
   );
 }
