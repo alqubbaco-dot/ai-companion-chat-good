@@ -37,6 +37,7 @@ public class MainActivity extends Activity {
     private static final int REQ_PERMISSIONS = 1;
     private WebView web;
     private PermissionRequest pendingWebPermission;
+    private RewardedAds rewardedAds;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -100,6 +101,10 @@ public class MainActivity extends Activity {
             Prefs.setToken(this, token);
             pushTokenToPage();
         });
+
+        // الإعلانات بمكافأة (نظام النقاط)
+        rewardedAds = new RewardedAds(this, this::sendAdEventToPage);
+        rewardedAds.init();
 
         // فحص التحديثات (بس للنسخ اللي مو من Google Play)
         UpdateChecker.checkAsync(this);
@@ -233,6 +238,19 @@ public class MainActivity extends Activity {
                 null));
     }
 
+    // نبلّغ الصفحة بحالة الإعلان: window.addEventListener('ghabiy-ad', e => e.detail.status)
+    private void sendAdEventToPage(String status, String message) {
+        if (web == null) return;
+        try {
+            JSONObject detail = new JSONObject();
+            detail.put("status", status);
+            detail.put("message", message == null ? "" : message);
+            final String js = "window.dispatchEvent(new CustomEvent('ghabiy-ad',{detail:" + detail + "}))";
+            runOnUiThread(() -> web.evaluateJavascript(js, null));
+        } catch (Exception ignored) {
+        }
+    }
+
     /** دوال يكدر الموقع يستدعيها: window.GhabiyNative.xxx() */
     private class Bridge {
         @JavascriptInterface
@@ -249,6 +267,17 @@ public class MainActivity extends Activity {
         @JavascriptInterface
         public void setUser(String userId) {
             Prefs.setUserId(MainActivity.this, userId);
+        }
+
+        /** عرض إعلان بمكافأة (النقطة تنضاف من السيرفر بعد تأكيد Google) */
+        @JavascriptInterface
+        public void showRewardedAd() {
+            if (rewardedAds != null) rewardedAds.show();
+        }
+
+        @JavascriptInterface
+        public boolean isRewardedAdReady() {
+            return rewardedAds != null && rewardedAds.isReady();
         }
 
         @JavascriptInterface

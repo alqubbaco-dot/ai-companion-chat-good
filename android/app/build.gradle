@@ -62,4 +62,5 @@ dependencies {
     implementation platform('com.google.firebase:firebase-bom:33.5.1')
     implementation 'com.google.firebase:firebase-messaging'
     implementation 'androidx.core:core:1.13.1'
+    implementation 'com.google.android.gms:play-services-ads:23.6.0'
 }

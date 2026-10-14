@@ -54,6 +54,11 @@
             </intent-filter>
         </service>
 
+        <!-- رقم التطبيق بـ AdMob -->
+        <meta-data
+            android:name="com.google.android.gms.ads.APPLICATION_ID"
+            android:value="ca-app-pub-6994022142091679~1065288708" />
+
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_icon"
             android:resource="@drawable/ic_stat_call" />
