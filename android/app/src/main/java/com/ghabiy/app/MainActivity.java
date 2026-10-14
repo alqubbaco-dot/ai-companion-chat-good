@@ -101,6 +101,9 @@ public class MainActivity extends Activity {
             pushTokenToPage();
         });
 
+        // فحص التحديثات (بس للنسخ اللي مو من Google Play)
+        UpdateChecker.checkAsync(this);
+
         if (savedInstanceState != null) {
             web.restoreState(savedInstanceState);
         } else {

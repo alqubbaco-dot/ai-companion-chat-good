@@ -32,6 +32,14 @@ final class Prefs {
         sp(c).edit().putBoolean("asked_fsi", true).apply();
     }
 
+    static int skippedVersion(Context c) {
+        return sp(c).getInt("skipped_version", -1);
+    }
+
+    static void setSkippedVersion(Context c, int v) {
+        sp(c).edit().putInt("skipped_version", v).apply();
+    }
+
     private Prefs() {
     }
 }
