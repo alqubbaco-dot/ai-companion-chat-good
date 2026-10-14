@@ -1,7 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { useI18n, type TranslationKey } from "@/lib/i18n";
 import { useTheme } from "@/lib/theme";
-import { useChatStore } from "@/lib/chat-store";
 import { useFriends } from "@/lib/friends-store";
 
 // الشريط العلوي للموبايل: الشعار والاسم، وأزرار اللغة والوضع الليلي والإعدادات
@@ -74,12 +73,11 @@ type TabItem = {
 // الشريط السفلي للموبايل، مثل تطبيقات المراسلة
 export function MobileBottomNav() {
   const { t } = useI18n();
-  const { conversations } = useChatStore();
   const { incoming } = useFriends();
 
   const items: TabItem[] = [
     { to: "/", emoji: "🤖", labelKey: "tabAssistant" },
-    { to: "/chats", emoji: "💬", labelKey: "tabChats", badge: conversations.length || undefined },
+    { to: "/chats", emoji: "💬", labelKey: "tabChats" },
     { to: "/friends", emoji: "👥", labelKey: "tabFriends" },
     { to: "/requests", emoji: "🔔", labelKey: "tabRequests", badge: incoming.length || undefined },
     { to: "/account", emoji: "👤", labelKey: "tabAccount" },
