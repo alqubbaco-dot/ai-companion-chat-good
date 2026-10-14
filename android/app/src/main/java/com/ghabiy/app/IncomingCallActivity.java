@@ -141,6 +141,7 @@ public class IncomingCallActivity extends Activity {
                 LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
 
         setContentView(root);
+        EdgeToEdge.padForSystemBars(root, false);
     }
 
     private View roundButton(String label, String color, View.OnClickListener click) {

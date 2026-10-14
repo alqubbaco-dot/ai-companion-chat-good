@@ -17,7 +17,9 @@ import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.widget.FrameLayout;
 import android.widget.Toast;
+import android.window.OnBackInvokedDispatcher;
 
 import com.google.firebase.messaging.FirebaseMessaging;
 
@@ -44,7 +46,19 @@ public class MainActivity extends Activity {
         super.onCreate(savedInstanceState);
 
         web = new WebView(this);
-        setContentView(web);
+        // حاوية بلون التطبيق: تاخذ مكان شريط الحالة والأزرار بأندرويد 15+
+        FrameLayout container = new FrameLayout(this);
+        container.setBackgroundColor(0xFF141852);
+        container.addView(web, new FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
+        setContentView(container);
+        EdgeToEdge.padForSystemBars(container, true);
+
+        // زر الرجوع بأندرويد 13+ (أندرويد 16 ما يستدعي onBackPressed)
+        if (Build.VERSION.SDK_INT >= 33) {
+            getOnBackInvokedDispatcher().registerOnBackInvokedCallback(
+                    OnBackInvokedDispatcher.PRIORITY_DEFAULT, this::handleBack);
+        }
 
         WebSettings s = web.getSettings();
         s.setJavaScriptEnabled(true);
@@ -106,8 +120,8 @@ public class MainActivity extends Activity {
         rewardedAds = new RewardedAds(this, this::sendAdEventToPage);
         rewardedAds.init();
 
-        // فحص التحديثات (بس للنسخ اللي مو من Google Play)
-        UpdateChecker.checkAsync(this);
+        // فحص التحديثات: بس بنسخة GitHub (Google Play تمنع التحديث الذاتي)
+        if (BuildConfig.SELF_UPDATE) UpdateChecker.checkAsync(this);
 
         if (savedInstanceState != null) {
             web.restoreState(savedInstanceState);
@@ -152,10 +166,15 @@ public class MainActivity extends Activity {
 
     @Override
     public void onBackPressed() {
+        handleBack();
+    }
+
+    // نرجع صفحة بالتطبيق، وإذا ماكو صفحة قبلها نخلي التطبيق بالخلفية (حتى توصل المكالمات بسرعة)
+    private void handleBack() {
         if (web != null && web.canGoBack()) {
             web.goBack();
         } else {
-            super.onBackPressed();
+            moveTaskToBack(true);
         }
     }
 

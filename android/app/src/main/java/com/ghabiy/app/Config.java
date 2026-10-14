@@ -8,8 +8,8 @@ final class Config {
 
     // AdMob: الإعلان بمكافأة (points_reward)
     static final String ADMOB_REWARDED_UNIT = "ca-app-pub-6994022142091679/1170984501";
-    // true = إعلانات تجريبية على كل جهاز (للتجربة). نخليها false قبل النشر على Google Play
-    static final boolean ADS_TEST_MODE = true;
+    // إعلانات تجريبية بنسخة GitHub، وحقيقية بنسخة Google Play (من build.gradle)
+    static final boolean ADS_TEST_MODE = BuildConfig.ADS_TEST_MODE;
 
     private Config() {
     }

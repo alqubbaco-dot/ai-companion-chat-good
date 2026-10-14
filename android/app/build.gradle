@@ -10,14 +10,34 @@ def releasePassword = System.getenv('ANDROID_KEYSTORE_PASSWORD')
 
 android {
     namespace 'com.ghabiy.app'
-    compileSdk 34
+    compileSdk 36
 
     defaultConfig {
         applicationId 'com.ghabiy.app'
         minSdk 24
-        targetSdk 34
+        targetSdk 36
         versionCode runNumber
         versionName "1.0.${runNumber}"
+    }
+
+    buildFeatures {
+        buildConfig true
+    }
+
+    // نسختين: github = اللي تنزل من GitHub وتحدّث نفسها (إعلانات تجريبية)
+    //         play   = نسخة Google Play (بدون تحديث ذاتي، وإعلانات حقيقية)
+    flavorDimensions 'store'
+    productFlavors {
+        github {
+            dimension 'store'
+            buildConfigField 'boolean', 'SELF_UPDATE', 'true'
+            buildConfigField 'boolean', 'ADS_TEST_MODE', 'true'
+        }
+        play {
+            dimension 'store'
+            buildConfigField 'boolean', 'SELF_UPDATE', 'false'
+            buildConfigField 'boolean', 'ADS_TEST_MODE', 'false'
+        }
     }
 
     signingConfigs {
