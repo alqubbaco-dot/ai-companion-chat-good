@@ -16,9 +16,9 @@ const UPDATED = "14 أكتوبر 2026";
 const UPDATED_EN = "October 14, 2026";
 const CONTACT = "abnalramady@gmail.com";
 
-function Section({ title, children }: { title: string; children: ReactNode }) {
+function Section({ title, children, id }: { title: string; children: ReactNode; id?: string }) {
   return (
-    <section className="space-y-2">
+    <section id={id} className="space-y-2 scroll-mt-6">
       <h2 className="font-display text-lg font-extrabold text-ink">{title}</h2>
       <div className="space-y-2 text-[15px] leading-7 text-ink/85">{children}</div>
     </section>
@@ -111,11 +111,11 @@ function PrivacyPage() {
             </p>
           </Section>
 
-          <Section title="6. حذف الحساب والبيانات">
+          <Section title="6. حذف الحساب والبيانات" id="delete-account">
             <p>
-              تكدر تطلب حذف حسابك وكل بياناتك (الملف الشخصي، الأصدقاء، الرسائل) بأي وقت. أرسل طلبك من نفس رقم
-              الهاتف المسجّل أو اذكره بالرسالة على الإيميل: <b dir="ltr">{CONTACT}</b>، ونحذف البيانات خلال 30
-              يوم كحد أقصى.
+              تكدر تحذف حسابك وكل بياناتك (الملف الشخصي، الأصدقاء، الرسائل، سجل المكالمات) بنفسك بأي وقت: من
+              التطبيق افتح <b>حسابي</b> ← <b>حذف الحساب نهائياً</b>. الحذف فوري ونهائي. وإذا ما تكدر تدخل للتطبيق،
+              راسلنا على <b dir="ltr">{CONTACT}</b> واذكر رقم هاتفك المسجّل، ونحذف البيانات خلال 30 يوم كحد أقصى.
             </p>
           </Section>
 
@@ -163,9 +163,10 @@ function PrivacyPage() {
               can only read their own conversations and friends.
             </p>
             <p>
-              <b>Account and data deletion:</b> you can request deletion of your account and all associated data
-              at any time by emailing <b>{CONTACT}</b> with your registered phone number. We delete the data within
-              30 days.
+              <b>Account and data deletion:</b> you can delete your account and all associated data yourself at
+              any time from the app: open <b>My account</b> → <b>Delete account permanently</b>. Deletion is immediate
+              and permanent. If you cannot access the app, email <b>{CONTACT}</b> with your registered phone number and
+              we will delete the data within 30 days.
             </p>
             <p>
               <b>Children:</b> the app is not directed to children under 13 and we do not knowingly collect their

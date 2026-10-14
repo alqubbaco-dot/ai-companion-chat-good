@@ -28,7 +28,35 @@ function AccountPage() {
   const [nameDraft, setNameDraft] = useState("");
   const [phone, setPhone] = useState("");
   const [phoneDraft, setPhoneDraft] = useState("");
-  const { refreshProfile } = useFriends();
+  const { refreshProfile, resetAll } = useFriends();
+  const [deleteStep, setDeleteStep] = useState<0 | 1>(0);
+  const [deleteWord, setDeleteWord] = useState("");
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  // حذف الحساب نهائياً (الدالة بـ supabase/delete-account.sql)
+  const handleDeleteAccount = async () => {
+    if (deleteWord.trim() !== "حذف" || isDeleting) return;
+    setIsDeleting(true);
+    try {
+      const { error } = await cloudClient.rpc("delete_my_account");
+      if (error) throw error;
+      clearAll();
+      resetAll();
+      try {
+        localStorage.clear();
+      } catch {
+        /* */
+      }
+      await cloudClient.auth.signOut().catch(() => undefined);
+      toast.success("انحذف حسابك وكل بياناتك. نتمنى نشوفك مرة ثانية 👋");
+      navigate({ to: "/login" });
+    } catch (err) {
+      console.error("فشل حذف الحساب:", err);
+      toast.error("ما گدرنا نحذف الحساب هسه، جرّب بعدين أو راسلنا من صفحة الخصوصية");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   useEffect(() => {
     let active = true;
@@ -193,6 +221,53 @@ function AccountPage() {
         >
           تسجيل الخروج
         </button>
+
+        {/* منطقة الخطر: حذف الحساب نهائياً */}
+        <div className="rounded-2xl border-2 border-red-300 bg-red-50/60 p-4 dark:bg-red-950/20">
+          {deleteStep === 0 ? (
+            <button
+              type="button"
+              onClick={() => setDeleteStep(1)}
+              className="w-full text-sm font-display font-extrabold text-red-600 cursor-pointer"
+            >
+              🗑 حذف الحساب نهائياً
+            </button>
+          ) : (
+            <div className="space-y-3">
+              <p className="font-display text-sm font-extrabold text-red-600">⚠️ متأكد تريد تحذف حسابك؟</p>
+              <p className="text-[12.5px] leading-6 text-ink/80">
+                راح ينمسح ملفك الشخصي ورقمك وأصدقاءك وكل رسائلك وسجل مكالماتك <b>نهائياً</b>، وما نكدر نرجعها.
+                حتى تأكد، اكتب كلمة <b>حذف</b> بالمربع:
+              </p>
+              <input
+                value={deleteWord}
+                onChange={(e) => setDeleteWord(e.target.value)}
+                placeholder="اكتب: حذف"
+                className="w-full rounded-xl border-2 border-red-300 bg-paper px-3 py-2 text-sm outline-none"
+              />
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => void handleDeleteAccount()}
+                  disabled={deleteWord.trim() !== "حذف" || isDeleting}
+                  className="flex-1 rounded-xl bg-red-600 py-2.5 text-sm font-bold text-white disabled:opacity-40 cursor-pointer"
+                >
+                  {isDeleting ? "لحظة…" : "احذف حسابي"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDeleteStep(0);
+                    setDeleteWord("");
+                  }}
+                  className="flex-1 rounded-xl border-2 border-line py-2.5 text-sm font-bold cursor-pointer"
+                >
+                  إلغاء
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </PageBody>
   );
