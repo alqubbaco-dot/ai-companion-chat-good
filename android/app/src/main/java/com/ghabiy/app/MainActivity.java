@@ -327,6 +327,18 @@ public class MainActivity extends Activity {
             return rewardedAds != null && rewardedAds.isReady();
         }
 
+        /** وضع المكالمة (true عند بدء الاتصال، false عند انتهائه) */
+        @JavascriptInterface
+        public void callAudio(boolean active) {
+            runOnUiThread(() -> CallAudio.setActive(MainActivity.this, active));
+        }
+
+        /** السبيكر (true) أو سماعة الأذن (false) */
+        @JavascriptInterface
+        public void setSpeaker(boolean on) {
+            runOnUiThread(() -> CallAudio.setSpeaker(MainActivity.this, on));
+        }
+
         @JavascriptInterface
         public String appVersion() {
             try {

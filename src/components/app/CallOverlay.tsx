@@ -78,6 +78,9 @@ export function CallOverlay() {
     rejectCall,
     hangUp,
     toggleMute,
+    speaker,
+    canToggleSpeaker,
+    toggleSpeaker,
     remoteAudioRef,
     localStream,
     remoteStream,
@@ -173,6 +176,15 @@ export function CallOverlay() {
               >
                 {muted ? "🔇" : "🎙️"}
               </RoundButton>
+              {canToggleSpeaker ? (
+                <RoundButton
+                  onClick={toggleSpeaker}
+                  label={speaker ? "السبيكر" : "سبيكر"}
+                  tone={speaker ? "white" : "glass"}
+                >
+                  {speaker ? "🔊" : "🔈"}
+                </RoundButton>
+              ) : null}
               {isVideo && hasLocalVideo ? (
                 <>
                   <RoundButton onClick={toggleCamera} label={cameraOff ? "الكاميرا مطفية" : "الكاميرا"} tone={cameraOff ? "white" : "glass"}>

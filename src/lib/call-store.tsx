@@ -57,6 +57,9 @@ type CallValue = {
   call: CallInfo | null;
   muted: boolean;
   speaker: boolean;
+  /** زر السبيكر يشتغل بس بتطبيق الأندرويد */
+  canToggleSpeaker: boolean;
+  toggleSpeaker: () => void;
   seconds: number;
   endedReason: string | null;
   startCall: (peerId: string, peerName: string, video?: boolean) => Promise<void>;
@@ -131,6 +134,14 @@ async function ensureTurnServers(timeoutMs = 3000): Promise<void> {
   await Promise.race([turnLoading, new Promise((r) => setTimeout(r, timeoutMs))]);
 }
 
+// ── السبيكر عن طريق تطبيق الأندرويد ──
+type AudioBridge = { callAudio?: (active: boolean) => void; setSpeaker?: (on: boolean) => void };
+function audioBridge(): AudioBridge | null {
+  if (typeof window === "undefined") return null;
+  const b = (window as unknown as { GhabiyNative?: AudioBridge }).GhabiyNative;
+  return b && typeof b.setSpeaker === "function" && typeof b.callAudio === "function" ? b : null;
+}
+
 function newCallId() {
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
 }
@@ -203,6 +214,9 @@ export function CallProvider({ children }: { children: ReactNode }) {
   const [phase, setPhase] = useState<CallPhase>("idle");
   const [call, setCall] = useState<CallInfo | null>(null);
   const [muted, setMuted] = useState(false);
+  const [speaker, setSpeaker] = useState(false);
+  const [canToggleSpeaker, setCanToggleSpeaker] = useState(false);
+  const audioActiveRef = useRef(false);
   const [cameraOff, setCameraOff] = useState(false);
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
@@ -576,6 +590,33 @@ export function CallProvider({ children }: { children: ReactNode }) {
     cleanup("انتهت المكالمة");
   }, [cleanup, myId, notifyMissed, sendSignal]);
 
+  // وضع صوت المكالمة: الصوتية تبدي بسماعة الأذن، والفيديو بالسبيكر (مثل الواتساب)
+  useEffect(() => {
+    const bridge = audioBridge();
+    setCanToggleSpeaker(!!bridge);
+    if (!bridge) return;
+    const inCall = phase === "outgoing" || phase === "connecting" || phase === "active";
+    if (inCall && !audioActiveRef.current) {
+      audioActiveRef.current = true;
+      const startOnSpeaker = !!call?.video;
+      bridge.callAudio?.(true);
+      bridge.setSpeaker?.(startOnSpeaker);
+      setSpeaker(startOnSpeaker);
+    } else if (!inCall && audioActiveRef.current) {
+      audioActiveRef.current = false;
+      bridge.callAudio?.(false);
+      setSpeaker(false);
+    }
+  }, [phase, call?.video]);
+
+  const toggleSpeaker = useCallback(() => {
+    const bridge = audioBridge();
+    if (!bridge) return;
+    const next = !speaker;
+    bridge.setSpeaker?.(next);
+    setSpeaker(next);
+  }, [speaker]);
+
   const toggleMute = useCallback(() => {
     const stream = localStreamRef.current;
     if (!stream) return;
@@ -814,7 +855,9 @@ export function CallProvider({ children }: { children: ReactNode }) {
       phase,
       call,
       muted,
-      speaker: true,
+      speaker,
+      canToggleSpeaker,
+      toggleSpeaker,
       seconds,
       endedReason,
       startCall,
@@ -833,6 +876,9 @@ export function CallProvider({ children }: { children: ReactNode }) {
       phase,
       call,
       muted,
+      speaker,
+      canToggleSpeaker,
+      toggleSpeaker,
       seconds,
       endedReason,
       startCall,
