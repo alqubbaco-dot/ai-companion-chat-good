@@ -137,13 +137,17 @@ export function PersonRow({
           </div>
         </div>
 
-        {/* غير الأصدقاء: أزرارهم (إرسال طلب، قبول...) تبقى ظاهرة */}
-        {!isFriendRow && children ? (
-          <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
-            {children}
-          </div>
-        ) : null}
       </div>
+
+      {/* غير الأصدقاء: أزرارهم (إرسال طلب، قبول...) تحت الاسم حتى ما ياخذون مكانه */}
+      {!isFriendRow && children ? (
+        <div
+          className="-mt-1 flex flex-wrap items-center gap-1.5 px-3 pb-3 ps-[4.5rem]"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {children}
+        </div>
+      ) : null}
 
       {/* خيارات الصديق بعد الضغط المطوّل */}
       {isFriendRow && showOptions ? (
