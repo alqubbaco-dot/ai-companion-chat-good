@@ -36,7 +36,10 @@ function PrivateChatPage() {
   const bottomRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const micStartX = useRef(0);
+  const micPressAt = useRef(0);
   const [cancelHint, setCancelHint] = useState(false);
+  // تسجيل مقفول: ضغطة سريعة تبدي التسجيل، وبعدها زر ➤ يرسل و✕ يلغي
+  const [voiceLocked, setVoiceLocked] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -149,6 +152,11 @@ function PrivateChatPage() {
 
   const voiceError = useCallback((text: string) => toast.error(text), []);
   const recorder = useVoiceRecorder((v) => void sendVoice(v), voiceError);
+  const voiceActive = recorder.recording || recorder.starting || voiceLocked;
+  // إذا خلص التسجيل (وصل الحد الأقصى أو صار خطأ) نرجع الشريط الطبيعي
+  useEffect(() => {
+    if (voiceLocked && !recorder.recording && !recorder.starting) setVoiceLocked(false);
+  }, [voiceLocked, recorder.recording, recorder.starting]);
 
   const submit = async () => {
     if (!draft.trim() || sending) return;
@@ -271,14 +279,35 @@ function PrivateChatPage() {
           onChange={(event) => void sendImage(event.target.files?.[0])}
         />
 
-        {recorder.recording ? (
+        {voiceActive ? (
           // شريط التسجيل مثل الواتساب
           <div className="flex min-h-11 flex-1 items-center gap-3 rounded-3xl border-2 border-coral/50 bg-paper px-4">
             <span className="size-2.5 animate-pulse rounded-full bg-red-500" />
             <span className="font-mono text-sm font-bold">{formatDuration(recorder.elapsed)}</span>
             <span className={`min-w-0 flex-1 truncate text-[12px] ${cancelHint ? "font-bold text-coral" : "text-muted-ink"}`}>
-              {cancelHint ? "شيل إصبعك حتى تلغي ✕" : `اسحب للجنب حتى تلغي · أقصى ${MAX_VOICE_SECONDS / 60} دقيقة`}
+              {!recorder.recording
+                ? "جاري تشغيل المايك…"
+                : voiceLocked
+                  ? "ديسجّل… اضغط ➤ حتى ترسل"
+                  : cancelHint
+                    ? "شيل إصبعك حتى تلغي ✕"
+                    : `اسحب للجنب حتى تلغي · أقصى ${MAX_VOICE_SECONDS / 60} دقيقة`}
             </span>
+            {voiceLocked && (
+              <button
+                type="button"
+                onClick={() => {
+                  recorder.stop(false);
+                  setVoiceLocked(false);
+                  toast("انلغت الرسالة الصوتية");
+                }}
+                className="grid size-8 shrink-0 place-items-center rounded-full text-base text-coral hover:bg-ink/5"
+                aria-label="إلغاء التسجيل"
+                title="إلغاء التسجيل"
+              >
+                ✕
+              </button>
+            )}
           </div>
         ) : (
           <>
@@ -309,7 +338,7 @@ function PrivateChatPage() {
           </>
         )}
 
-        {draft.trim() && !recorder.recording ? (
+        {draft.trim() && !voiceActive ? (
           <button
             type="button"
             onClick={() => void submit()}
@@ -321,42 +350,70 @@ function PrivateChatPage() {
             <span className="rtl:-scale-x-100">➤</span>
           </button>
         ) : (
+          voiceLocked ? (
+          // التسجيل مقفول: هذا الزر يرسل
+          <button
+            type="button"
+            onClick={() => {
+              recorder.stop(true);
+              setVoiceLocked(false);
+            }}
+            className="grid size-11 shrink-0 place-items-center rounded-full bg-emerald-500 text-lg text-white"
+            aria-label="إرسال الرسالة الصوتية"
+            title="إرسال الرسالة الصوتية"
+          >
+            <span className="rtl:-scale-x-100">➤</span>
+          </button>
+        ) : (
           // اضغط مطوّل وسجّل، شيل إصبعك يرسل، اسحب للجنب يلغي
+          // ضغطة سريعة: يبقى يسجّل (مقفول) وترسل بزر ➤
           <button
             type="button"
             disabled={loading || uploading !== null}
             onPointerDown={(e) => {
               e.preventDefault();
-              e.currentTarget.setPointerCapture(e.pointerId);
+              try {
+                e.currentTarget.setPointerCapture(e.pointerId);
+              } catch {
+                /* */
+              }
               micStartX.current = e.clientX;
+              micPressAt.current = Date.now();
               setCancelHint(false);
               void recorder.start();
             }}
             onPointerMove={(e) => {
-              if (!recorder.recording) return;
+              if (!recorder.recording && !recorder.starting) return;
               setCancelHint(Math.abs(e.clientX - micStartX.current) > 90);
             }}
             onPointerUp={(e) => {
               const cancel = Math.abs(e.clientX - micStartX.current) > 90;
               setCancelHint(false);
-              const tooShort = recorder.elapsed < 1;
-              recorder.stop(!cancel);
-              if (cancel) toast("انلغت الرسالة الصوتية");
-              else if (tooShort) toast("اضغط مطوّل على 🎤 وسجّل، وشيل إصبعك حتى ترسل");
+              if (cancel) {
+                recorder.stop(false);
+                toast("انلغت الرسالة الصوتية");
+                return;
+              }
+              const quickTap = Date.now() - micPressAt.current < 500;
+              // ضغطة سريعة، أو المايك بعده ما اشتغل: نخلي التسجيل يكمل
+              if (quickTap || !recorder.recording) setVoiceLocked(true);
+              else recorder.stop(true);
             }}
             onPointerCancel={() => {
+              // أندرويد أحياناً يقطع اللمسة (مثلاً لما يطلب إذن المايك): ما نلغي، نقفل التسجيل
               setCancelHint(false);
-              recorder.stop(false);
+              setVoiceLocked(true);
             }}
             onContextMenu={(e) => e.preventDefault()}
             className={`grid size-11 shrink-0 touch-none select-none place-items-center rounded-full text-lg text-white transition-transform disabled:opacity-40 ${
               recorder.recording ? "scale-125 bg-red-500" : "bg-emerald-500"
             }`}
-            aria-label="اضغط مطوّلاً وسجّل رسالة صوتية"
-            title="اضغط مطوّلاً وسجّل رسالة صوتية"
+            aria-label="اضغط وسجّل رسالة صوتية"
+            title="اضغط وسجّل رسالة صوتية"
           >
             🎤
           </button>
+        )
         )}
       </div>
     </div>

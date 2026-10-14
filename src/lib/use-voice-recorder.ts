@@ -3,6 +3,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 // تسجيل رسالة صوتية بالمايكروفون (MediaRecorder)، حد أقصى دقيقتين
 
 export const MAX_VOICE_SECONDS = 120;
+// أقصر رسالة نرسلها (أقل من هيج = ضغطة بالغلط)
+const MIN_VOICE_SECONDS = 0.5;
 
 export type VoiceResult = { blob: Blob; contentType: string; ext: string; duration: number };
 
@@ -25,7 +27,17 @@ function pickFormat() {
   return null;
 }
 
+function buzz() {
+  try {
+    navigator.vibrate?.(35);
+  } catch {
+    /* */
+  }
+}
+
 export function useVoiceRecorder(onFinished: (result: VoiceResult) => void, onError: (message: string) => void) {
+  // starting: المايك ديشتغل (بين الضغطة وبداية التسجيل الفعلي)
+  const [starting, setStarting] = useState(false);
   const [recording, setRecording] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const recorderRef = useRef<MediaRecorder | null>(null);
@@ -34,10 +46,14 @@ export function useVoiceRecorder(onFinished: (result: VoiceResult) => void, onEr
   const startedAtRef = useRef(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const sendOnStopRef = useRef(true);
-  // المستخدم بعده ضاغط؟ (إذا شال إصبعه قبل ما يشتغل المايك، ما نبدي)
+  // المستخدم بعده يريد يسجّل؟ (إذا لغى قبل ما يشتغل المايك، ما نبدي)
   const wantRef = useRef(false);
+  // فتح المايك شغّال هسه؟ حتى ما ينفتح مرتين بنفس الوقت
+  const startingRef = useRef(false);
   const finishedRef = useRef(onFinished);
   finishedRef.current = onFinished;
+  const errorRef = useRef(onError);
+  errorRef.current = onError;
 
   const cleanup = useCallback(() => {
     if (timerRef.current) clearInterval(timerRef.current);
@@ -49,22 +65,30 @@ export function useVoiceRecorder(onFinished: (result: VoiceResult) => void, onEr
     setElapsed(0);
   }, []);
 
-  const stop = useCallback((send: boolean) => {
-    wantRef.current = false;
-    const rec = recorderRef.current;
-    sendOnStopRef.current = send;
-    if (rec && rec.state !== "inactive") rec.stop();
-    else cleanup();
-  }, [cleanup]);
+  const stop = useCallback(
+    (send: boolean) => {
+      wantRef.current = false;
+      const rec = recorderRef.current;
+      sendOnStopRef.current = send;
+      if (rec && rec.state !== "inactive") rec.stop();
+      else if (!startingRef.current) cleanup();
+      // إذا المايك بعده ديفتح: هو بنفسه يشوف wantRef=false ويسكّر
+    },
+    [cleanup],
+  );
 
   const start = useCallback(async () => {
-    if (recorderRef.current) return;
     wantRef.current = true;
+    // مسجّل أصلاً، أو المايك بعده ديفتح من ضغطة سابقة: لا نفتحه مرة ثانية
+    if (recorderRef.current || startingRef.current) return;
     const format = pickFormat();
     if (!format || !navigator.mediaDevices?.getUserMedia) {
-      onError("جهازك ما يدعم تسجيل الرسائل الصوتية");
+      wantRef.current = false;
+      errorRef.current("جهازك ما يدعم تسجيل الرسائل الصوتية");
       return;
     }
+    startingRef.current = true;
+    setStarting(true);
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       if (!wantRef.current) {
@@ -84,8 +108,7 @@ export function useVoiceRecorder(onFinished: (result: VoiceResult) => void, onEr
         const blob = new Blob(chunksRef.current, { type: format.contentType });
         const send = sendOnStopRef.current;
         cleanup();
-        // أقل من ثانية = ضغطة بالغلط، ما نرسلها
-        if (send && duration >= 1 && blob.size > 0) {
+        if (send && duration >= MIN_VOICE_SECONDS && blob.size > 0) {
           finishedRef.current({ blob, contentType: format.contentType, ext: format.ext, duration });
         }
       };
@@ -93,25 +116,34 @@ export function useVoiceRecorder(onFinished: (result: VoiceResult) => void, onEr
       rec.start(250);
       setRecording(true);
       setElapsed(0);
+      buzz();
       timerRef.current = setInterval(() => {
         const secs = (Date.now() - startedAtRef.current) / 1000;
         setElapsed(secs);
         if (secs >= MAX_VOICE_SECONDS) stop(true);
       }, 200);
     } catch {
+      wantRef.current = false;
       cleanup();
-      onError("لازم تسمح بالمايكروفون حتى تسجّل رسالة صوتية");
+      errorRef.current("لازم تسمح بالمايكروفون حتى تسجّل رسالة صوتية");
+    } finally {
+      startingRef.current = false;
+      setStarting(false);
     }
-  }, [cleanup, onError, stop]);
+  }, [cleanup, stop]);
 
   // إذا طلع من الصفحة وهو يسجّل: نلغي
-  useEffect(() => () => {
-    sendOnStopRef.current = false;
-    const rec = recorderRef.current;
-    if (rec && rec.state !== "inactive") rec.stop();
-    streamRef.current?.getTracks().forEach((t) => t.stop());
-    if (timerRef.current) clearInterval(timerRef.current);
-  }, []);
+  useEffect(
+    () => () => {
+      wantRef.current = false;
+      sendOnStopRef.current = false;
+      const rec = recorderRef.current;
+      if (rec && rec.state !== "inactive") rec.stop();
+      streamRef.current?.getTracks().forEach((t) => t.stop());
+      if (timerRef.current) clearInterval(timerRef.current);
+    },
+    [],
+  );
 
-  return { recording, elapsed, start, stop };
+  return { recording, starting, elapsed, start, stop };
 }
