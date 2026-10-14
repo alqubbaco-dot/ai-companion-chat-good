@@ -38,10 +38,11 @@ export type CallInfo = {
   peerId: string;
   peerName: string;
   direction: "out" | "in";
+  video: boolean;
 };
 
 type Signal =
-  | { type: "invite"; callId: string; from: string; fromName: string; sdp: RTCSessionDescriptionInit }
+  | { type: "invite"; callId: string; from: string; fromName: string; sdp: RTCSessionDescriptionInit; video?: boolean }
   | { type: "answer"; callId: string; from: string; sdp: RTCSessionDescriptionInit }
   | { type: "ice"; callId: string; from: string; candidate: RTCIceCandidateInit }
   | { type: "reject"; callId: string; from: string; reason?: "busy" | "declined" }
@@ -56,7 +57,12 @@ type CallValue = {
   speaker: boolean;
   seconds: number;
   endedReason: string | null;
-  startCall: (peerId: string, peerName: string) => Promise<void>;
+  startCall: (peerId: string, peerName: string, video?: boolean) => Promise<void>;
+  localStream: MediaStream | null;
+  remoteStream: MediaStream | null;
+  cameraOff: boolean;
+  toggleCamera: () => void;
+  switchCamera: () => Promise<void>;
   acceptCall: () => Promise<void>;
   rejectCall: () => void;
   hangUp: () => void;
@@ -158,6 +164,10 @@ export function CallProvider({ children }: { children: ReactNode }) {
   const [phase, setPhase] = useState<CallPhase>("idle");
   const [call, setCall] = useState<CallInfo | null>(null);
   const [muted, setMuted] = useState(false);
+  const [cameraOff, setCameraOff] = useState(false);
+  const [localStream, setLocalStream] = useState<MediaStream | null>(null);
+  const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
+  const facingRef = useRef<"user" | "environment">("user");
   const [seconds, setSeconds] = useState(0);
   const [endedReason, setEndedReason] = useState<string | null>(null);
 
@@ -235,6 +245,10 @@ export function CallProvider({ children }: { children: ReactNode }) {
       pendingOfferRef.current = null;
       pendingIceRef.current = [];
       if (remoteAudioRef.current) remoteAudioRef.current.srcObject = null;
+      setLocalStream(null);
+      setRemoteStream(null);
+      setCameraOff(false);
+      facingRef.current = "user";
       if (peerChannelRef.current) {
         void supabase.removeChannel(peerChannelRef.current);
         peerChannelRef.current = null;
@@ -275,6 +289,7 @@ export function CallProvider({ children }: { children: ReactNode }) {
       };
       pc.ontrack = (event) => {
         const [stream] = event.streams;
+        if (stream) setRemoteStream(stream);
         if (remoteAudioRef.current && stream) {
           remoteAudioRef.current.srcObject = stream;
           void remoteAudioRef.current.play().catch(() => undefined);
@@ -288,7 +303,7 @@ export function CallProvider({ children }: { children: ReactNode }) {
           updatePhase("active");
         } else if (state === "failed") {
           void sendSignal({ type: "hangup", callId: info.callId, from: myId });
-          cleanup("تعذر ربط الصوت بين الجهازين (الشبكة تمنع الاتصال)");
+          cleanup("تعذر ربط المكالمة بين الجهازين (الشبكة تمنع الاتصال)");
         } else if (state === "disconnected") {
           // ننطي فرصة قصيرة يرجع الاتصال
           setTimeout(() => {
@@ -318,15 +333,29 @@ export function CallProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const getMic = useCallback(async () => {
+  const getMedia = useCallback(async (video: boolean) => {
     if (!navigator.mediaDevices?.getUserMedia) {
       throw new Error("المتصفح ما يدعم المايكروفون");
     }
-    const stream = await navigator.mediaDevices.getUserMedia({
-      audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
-      video: false,
-    });
+    const audio = { echoCancellation: true, noiseSuppression: true, autoGainControl: true };
+    let stream: MediaStream;
+    if (video) {
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          audio,
+          video: { facingMode: facingRef.current, width: { ideal: 640 }, height: { ideal: 480 }, frameRate: { ideal: 24 } },
+        });
+      } catch (err) {
+        // الكاميرا مو متاحة: نكمل بالصوت بس
+        console.warn("camera unavailable, audio only", err);
+        toast.info("ما گدرنا نشغّل الكاميرا، المكالمة تكمل بالصوت");
+        stream = await navigator.mediaDevices.getUserMedia({ audio, video: false });
+      }
+    } else {
+      stream = await navigator.mediaDevices.getUserMedia({ audio, video: false });
+    }
     localStreamRef.current = stream;
+    setLocalStream(stream);
     return stream;
   }, []);
 
@@ -348,7 +377,7 @@ export function CallProvider({ children }: { children: ReactNode }) {
 
   // ── بدء مكالمة ──
   const startCall = useCallback(
-    async (peerId: string, peerName: string) => {
+    async (peerId: string, peerName: string, video = false) => {
       if (!myId) {
         toast.error("لازم تسجّل دخول أول");
         return;
@@ -357,7 +386,7 @@ export function CallProvider({ children }: { children: ReactNode }) {
         toast.info("أكو مكالمة شغالة هسه");
         return;
       }
-      const info: CallInfo = { callId: newCallId(), peerId, peerName, direction: "out" };
+      const info: CallInfo = { callId: newCallId(), peerId, peerName, direction: "out", video };
       callRef.current = info;
       setCall(info);
       setSeconds(0);
@@ -365,11 +394,15 @@ export function CallProvider({ children }: { children: ReactNode }) {
       updatePhase("outgoing");
 
       try {
-        const stream = await getMic();
+        const stream = await getMedia(video);
         await openPeerChannel(peerId);
         const pc = createPeer(info);
         stream.getTracks().forEach((track) => pc.addTrack(track, stream));
-        const offer = await pc.createOffer({ offerToReceiveAudio: true });
+        if (video && stream.getVideoTracks().length === 0) {
+          // ما عندي كاميرا بس أريد أشوف صديقي
+          pc.addTransceiver("video", { direction: "recvonly" });
+        }
+        const offer = await pc.createOffer();
         await pc.setLocalDescription(offer);
         await sendSignal({
           type: "invite",
@@ -377,13 +410,14 @@ export function CallProvider({ children }: { children: ReactNode }) {
           from: myId,
           fromName: profile.name || "صديق",
           sdp: { type: offer.type, sdp: offer.sdp },
+          video,
         });
         // إشعار Push حتى يرن تلفونه لو التطبيق مسكّر
         const myName = profile.name || "صديق";
         void notifyFriend(
           peerId,
           "call",
-          `📞 مكالمة من ${myName}`,
+          video ? `📹 مكالمة فيديو من ${myName}` : `📞 مكالمة من ${myName}`,
           "اضغط حتى ترد على المكالمة",
           `/friends?call=${encodeURIComponent(info.callId)}&from=${encodeURIComponent(myId)}`,
           `call-${info.callId}`,
@@ -415,7 +449,7 @@ export function CallProvider({ children }: { children: ReactNode }) {
         );
       }
     },
-    [cleanup, createPeer, getMic, myId, notifyMissed, openPeerChannel, profile.name, sendSignal, updatePhase],
+    [cleanup, createPeer, getMedia, myId, notifyMissed, openPeerChannel, profile.name, sendSignal, updatePhase],
   );
 
   // ── الرد على مكالمة واردة ──
@@ -427,7 +461,7 @@ export function CallProvider({ children }: { children: ReactNode }) {
     clearTimeout(ringTimeoutRef.current);
     updatePhase("connecting");
     try {
-      const stream = await getMic();
+      const stream = await getMedia(info.video);
       const pc = createPeer(info);
       stream.getTracks().forEach((track) => pc.addTrack(track, stream));
       await pc.setRemoteDescription(offer);
@@ -452,7 +486,7 @@ export function CallProvider({ children }: { children: ReactNode }) {
       const name = err instanceof DOMException ? err.name : "";
       cleanup(name === "NotAllowedError" ? "لازم تسمح للتطبيق يستخدم المايكروفون" : "تعذر الرد على المكالمة");
     }
-  }, [cleanup, createPeer, flushPendingIce, getMic, myId, sendSignal, updatePhase]);
+  }, [cleanup, createPeer, flushPendingIce, getMedia, myId, sendSignal, updatePhase]);
 
   acceptCallRef.current = acceptCall;
 
@@ -478,6 +512,41 @@ export function CallProvider({ children }: { children: ReactNode }) {
     stream.getAudioTracks().forEach((t) => (t.enabled = !next));
     setMuted(next);
   }, [muted]);
+
+  const toggleCamera = useCallback(() => {
+    const stream = localStreamRef.current;
+    if (!stream) return;
+    const next = !cameraOff;
+    stream.getVideoTracks().forEach((t) => (t.enabled = !next));
+    setCameraOff(next);
+  }, [cameraOff]);
+
+  // تبديل الكاميرا الأمامية/الخلفية
+  const switchCamera = useCallback(async () => {
+    const stream = localStreamRef.current;
+    const pc = pcRef.current;
+    if (!stream || stream.getVideoTracks().length === 0) return;
+    const nextFacing = facingRef.current === "user" ? "environment" : "user";
+    try {
+      const fresh = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: nextFacing, width: { ideal: 640 }, height: { ideal: 480 } },
+        audio: false,
+      });
+      const newTrack = fresh.getVideoTracks()[0];
+      const oldTrack = stream.getVideoTracks()[0];
+      const sender = pc?.getSenders().find((sd) => sd.track?.kind === "video");
+      if (sender) await sender.replaceTrack(newTrack);
+      stream.removeTrack(oldTrack);
+      oldTrack.stop();
+      newTrack.enabled = !cameraOff;
+      stream.addTrack(newTrack);
+      facingRef.current = nextFacing;
+      setLocalStream(new MediaStream(stream.getTracks()));
+    } catch (err) {
+      console.warn("switch camera failed", err);
+      toast.error("ما گدرنا نبدّل الكاميرا");
+    }
+  }, [cameraOff]);
 
   // ── الاستماع على قناتي للإشارات الواردة ──
   useEffect(() => {
@@ -518,6 +587,7 @@ export function CallProvider({ children }: { children: ReactNode }) {
           peerId: signal.from,
           peerName: friend?.name || signal.fromName || "صديق",
           direction: "in",
+          video: Boolean(signal.video),
         };
         callRef.current = info;
         pendingOfferRef.current = signal.sdp;
@@ -594,6 +664,7 @@ export function CallProvider({ children }: { children: ReactNode }) {
             from: myId,
             fromName: profile.name || "صديق",
             sdp: { type: pc.localDescription.type, sdp: pc.localDescription.sdp },
+            video: current.video,
           });
         }
         return;
@@ -680,8 +751,29 @@ export function CallProvider({ children }: { children: ReactNode }) {
       hangUp,
       toggleMute,
       remoteAudioRef,
+      localStream,
+      remoteStream,
+      cameraOff,
+      toggleCamera,
+      switchCamera,
     }),
-    [phase, call, muted, seconds, endedReason, startCall, acceptCall, rejectCall, hangUp, toggleMute],
+    [
+      phase,
+      call,
+      muted,
+      seconds,
+      endedReason,
+      startCall,
+      acceptCall,
+      rejectCall,
+      hangUp,
+      toggleMute,
+      localStream,
+      remoteStream,
+      cameraOff,
+      toggleCamera,
+      switchCamera,
+    ],
   );
 
   return <CallContext.Provider value={value}>{children}</CallContext.Provider>;

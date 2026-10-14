@@ -27,6 +27,7 @@ public class IncomingCallActivity extends Activity {
     private String from;
     private String tag;
     private String path;
+    private boolean video;
     private final Handler handler = new Handler(Looper.getMainLooper());
 
     static boolean isShowing(String tag) {
@@ -74,6 +75,7 @@ public class IncomingCallActivity extends Activity {
         from = i.getStringExtra(Notifier.EXTRA_FROM);
         tag = i.getStringExtra(Notifier.EXTRA_TAG);
         path = i.getStringExtra(Notifier.EXTRA_PATH);
+        video = i.getBooleanExtra(Notifier.EXTRA_VIDEO, false);
     }
 
     private int dp(int v) {
@@ -116,7 +118,7 @@ public class IncomingCallActivity extends Activity {
         root.addView(title, tp);
 
         TextView sub = new TextView(this);
-        sub.setText("مكالمة صوتية واردة… الغباء الصناعي");
+        sub.setText(video ? "📹 مكالمة فيديو واردة… الغباء الصناعي" : "مكالمة صوتية واردة… الغباء الصناعي");
         sub.setTextColor(Color.argb(200, 255, 255, 255));
         sub.setTextSize(16);
         sub.setGravity(Gravity.CENTER);

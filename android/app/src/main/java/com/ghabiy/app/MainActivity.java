@@ -83,11 +83,12 @@ public class MainActivity extends Activity {
             @Override
             public void onPermissionRequest(final PermissionRequest request) {
                 runOnUiThread(() -> {
-                    if (hasPermission(Manifest.permission.RECORD_AUDIO)) {
+                    String[] missing = missingFor(request);
+                    if (missing.length == 0) {
                         request.grant(request.getResources());
                     } else {
                         pendingWebPermission = request;
-                        requestPermissions(new String[]{Manifest.permission.RECORD_AUDIO}, REQ_PERMISSIONS);
+                        requestPermissions(missing, REQ_PERMISSIONS);
                     }
                 });
             }
@@ -150,6 +151,20 @@ public class MainActivity extends Activity {
         }
     }
 
+    // الأذونات اللي يحتاجها الموقع (مايك و/أو كاميرا) وبعدها ما انطت
+    private String[] missingFor(PermissionRequest request) {
+        List<String> missing = new ArrayList<>();
+        for (String res : request.getResources()) {
+            if (PermissionRequest.RESOURCE_AUDIO_CAPTURE.equals(res) && !hasPermission(Manifest.permission.RECORD_AUDIO)) {
+                missing.add(Manifest.permission.RECORD_AUDIO);
+            }
+            if (PermissionRequest.RESOURCE_VIDEO_CAPTURE.equals(res) && !hasPermission(Manifest.permission.CAMERA)) {
+                missing.add(Manifest.permission.CAMERA);
+            }
+        }
+        return missing.toArray(new String[0]);
+    }
+
     private boolean hasPermission(String permission) {
         return checkSelfPermission(permission) == PackageManager.PERMISSION_GRANTED;
     }
@@ -187,11 +202,20 @@ public class MainActivity extends Activity {
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (pendingWebPermission != null) {
-            if (hasPermission(Manifest.permission.RECORD_AUDIO)) {
-                pendingWebPermission.grant(pendingWebPermission.getResources());
-            } else {
+            // نعطي الموقع بس الأشياء اللي المستخدم وافق عليها
+            List<String> granted = new ArrayList<>();
+            for (String res : pendingWebPermission.getResources()) {
+                if (PermissionRequest.RESOURCE_AUDIO_CAPTURE.equals(res) && hasPermission(Manifest.permission.RECORD_AUDIO)) {
+                    granted.add(res);
+                } else if (PermissionRequest.RESOURCE_VIDEO_CAPTURE.equals(res) && hasPermission(Manifest.permission.CAMERA)) {
+                    granted.add(res);
+                }
+            }
+            if (granted.isEmpty()) {
                 pendingWebPermission.deny();
                 Toast.makeText(this, "لازم تسمح بالمايكروفون حتى تشتغل المكالمات", Toast.LENGTH_LONG).show();
+            } else {
+                pendingWebPermission.grant(granted.toArray(new String[0]));
             }
             pendingWebPermission = null;
         }

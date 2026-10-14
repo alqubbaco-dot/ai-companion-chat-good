@@ -132,6 +132,17 @@ function PrivateChatPage() {
         {otherUserId ? (
           <button
             type="button"
+            onClick={() => void startCall(otherUserId, title, true)}
+            className="grid size-10 shrink-0 place-items-center rounded-full border-2 border-line bg-cream text-lg shadow-sm transition-transform active:scale-95"
+            title="مكالمة فيديو"
+            aria-label="مكالمة فيديو"
+          >
+            📹
+          </button>
+        ) : null}
+        {otherUserId ? (
+          <button
+            type="button"
             onClick={() => void startCall(otherUserId, title)}
             className="grid size-10 shrink-0 place-items-center rounded-full bg-emerald-500 text-lg text-white shadow-sm transition-transform active:scale-95"
             title="اتصال صوتي"

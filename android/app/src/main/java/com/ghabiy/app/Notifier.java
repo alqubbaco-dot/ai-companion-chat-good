@@ -34,6 +34,7 @@ final class Notifier {
     static final String EXTRA_NAME = "name";
     static final String EXTRA_TAG = "tag";
     static final String EXTRA_PATH = "path";
+    static final String EXTRA_VIDEO = "video";
 
     private Notifier() {
     }
@@ -83,8 +84,9 @@ final class Notifier {
         String url = d.get("url") != null ? d.get("url") : "/friends";
         String tag = d.get("tag");
         String title = d.get("title") != null ? d.get("title") : "📞 مكالمة واردة";
+        boolean video = title.contains("فيديو");
         String name = d.get("name");
-        if (name == null) name = title.replace("📞 مكالمة من ", "");
+        if (name == null) name = title.replace("📹 مكالمة فيديو من ", "").replace("📞 مكالمة من ", "");
         String callId = query(url, "call");
         String from = query(url, "from");
         int id = idFor(tag);
@@ -95,7 +97,8 @@ final class Notifier {
                 .putExtra(EXTRA_FROM, from)
                 .putExtra(EXTRA_NAME, name)
                 .putExtra(EXTRA_TAG, tag)
-                .putExtra(EXTRA_PATH, url);
+                .putExtra(EXTRA_PATH, url)
+                .putExtra(EXTRA_VIDEO, video);
         PendingIntent fullPi = PendingIntent.getActivity(c, id, full, piFlags());
 
         Intent accept = new Intent(c, MainActivity.class)
@@ -112,7 +115,7 @@ final class Notifier {
         NotificationCompat.Builder b = new NotificationCompat.Builder(c, CH_CALLS)
                 .setSmallIcon(R.drawable.ic_stat_call)
                 .setContentTitle(title)
-                .setContentText(d.get("body") != null ? d.get("body") : "مكالمة صوتية واردة")
+                .setContentText(video ? "مكالمة فيديو واردة" : (d.get("body") != null ? d.get("body") : "مكالمة صوتية واردة"))
                 .setPriority(NotificationCompat.PRIORITY_MAX)
                 .setCategory(NotificationCompat.CATEGORY_CALL)
                 .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)

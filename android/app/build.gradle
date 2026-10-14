@@ -4,6 +4,9 @@ plugins {
 }
 
 def runNumber = Integer.parseInt(System.getenv('GITHUB_RUN_NUMBER') ?: '1')
+// المفتاح السري يجي من GitHub Secrets (ما ينحفظ بالمستودع)
+def releaseKeystore = System.getenv('ANDROID_KEYSTORE_PATH')
+def releasePassword = System.getenv('ANDROID_KEYSTORE_PASSWORD')
 
 android {
     namespace 'com.ghabiy.app'
@@ -19,10 +22,18 @@ android {
 
     signingConfigs {
         shared {
-            storeFile file('ghabiy-debug.keystore')
-            storePassword 'ghabiy123'
-            keyAlias 'ghabiy'
-            keyPassword 'ghabiy123'
+            if (releaseKeystore && releasePassword) {
+                storeFile file(releaseKeystore)
+                storePassword releasePassword
+                keyAlias 'ghabiy-release'
+                keyPassword releasePassword
+            } else {
+                // مفتاح التجربة القديم (بس إذا السر مو موجود)
+                storeFile file('ghabiy-debug.keystore')
+                storePassword 'ghabiy123'
+                keyAlias 'ghabiy'
+                keyPassword 'ghabiy123'
+            }
         }
     }
 
