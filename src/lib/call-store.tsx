@@ -15,6 +15,7 @@ import { supabase } from "./supabase";
 import { useFriends } from "./friends-store";
 import { notifyFriend } from "./push-client";
 import { saveCallLog, type CallStatus } from "./call-logs";
+import { getTurnIceServers } from "./turn-server";
 
 /*
  * الاتصال الصوتي بين الأصدقاء (WebRTC)
@@ -86,6 +87,8 @@ function iceServers(): RTCIceServer[] {
   const servers: RTCIceServer[] = [
     { urls: ["stun:stun.l.google.com:19302", "stun:stun1.l.google.com:19302"] },
   ];
+  // السيرفر الوسيط من Cloudflare (إذا مضبوط)
+  if (turnCache && turnCache.expires > Date.now()) servers.push(...turnCache.servers);
   const env = import.meta.env as Record<string, string | undefined>;
   const turnUrl = env.VITE_TURN_URL;
   if (turnUrl) {
@@ -96,6 +99,36 @@ function iceServers(): RTCIceServer[] {
     });
   }
   return servers;
+}
+
+// ── السيرفر الوسيط (TURN) من Cloudflare: نجيب كلمات سر مؤقتة ونخزنها ──
+let turnCache: { servers: RTCIceServer[]; expires: number } | null = null;
+let turnLoading: Promise<void> | null = null;
+
+async function ensureTurnServers(timeoutMs = 3000): Promise<void> {
+  if (turnCache && turnCache.expires > Date.now() + 10 * 60_000) return;
+  if (!turnLoading) {
+    turnLoading = (async () => {
+      try {
+        const { data } = await supabase.auth.getSession();
+        const accessToken = data.session?.access_token;
+        if (!accessToken) return;
+        const result = await getTurnIceServers({ data: { accessToken } });
+        if (result.ok && result.iceServers.length > 0) {
+          // نخزنها لأقل من مدتها حتى ما تنتهي وسط مكالمة
+          turnCache = { servers: result.iceServers, expires: Date.now() + (result.ttl * 1000) / 2 };
+        } else if (!result.ok && result.error !== "turn not configured") {
+          console.warn("TURN:", result.error);
+        }
+      } catch (err) {
+        console.warn("TURN fetch failed", err);
+      } finally {
+        turnLoading = null;
+      }
+    })();
+  }
+  // ما نأخر المكالمة أكثر من 3 ثواني: إذا ما وصل، نكمل بالربط المباشر
+  await Promise.race([turnLoading, new Promise((r) => setTimeout(r, timeoutMs))]);
 }
 
 function newCallId() {
@@ -161,6 +194,11 @@ function createRinger(kind: "incoming" | "outgoing") {
 export function CallProvider({ children }: { children: ReactNode }) {
   const { profile, relationOf, directory } = useFriends();
   const myId = profile.id;
+
+  // نجهّز السيرفر الوسيط من يفتح التطبيق، حتى المكالمة تبدي بسرعة
+  useEffect(() => {
+    if (myId) void ensureTurnServers(10_000);
+  }, [myId]);
 
   const [phase, setPhase] = useState<CallPhase>("idle");
   const [call, setCall] = useState<CallInfo | null>(null);
@@ -423,7 +461,7 @@ export function CallProvider({ children }: { children: ReactNode }) {
       updatePhase("outgoing");
 
       try {
-        const stream = await getMedia(video);
+        const [stream] = await Promise.all([getMedia(video), ensureTurnServers()]);
         await openPeerChannel(peerId);
         const pc = createPeer(info);
         stream.getTracks().forEach((track) => pc.addTrack(track, stream));
@@ -491,7 +529,7 @@ export function CallProvider({ children }: { children: ReactNode }) {
     clearTimeout(ringTimeoutRef.current);
     updatePhase("connecting");
     try {
-      const stream = await getMedia(info.video);
+      const [stream] = await Promise.all([getMedia(info.video), ensureTurnServers()]);
       const pc = createPeer(info);
       stream.getTracks().forEach((track) => pc.addTrack(track, stream));
       await pc.setRemoteDescription(offer);
