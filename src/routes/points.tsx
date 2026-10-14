@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { PageBody } from "@/components/app/AppShell";
+import { ACCENTS, useTheme } from "@/lib/theme";
 import {
   canWatchAds,
   getFeaturePrices,
@@ -31,6 +32,9 @@ const FEATURE_EMOJI: Record<string, string> = {
   voice_changer: "🎙️",
 };
 
+// الميزات الجاهزة فعلاً بالتطبيق. الباقي يطلع "قريباً" وما ينشرى لحد ما نبنيه
+const READY_FEATURES = new Set(["themes"]);
+
 const AD_ERRORS: Record<string, string> = {
   login_required: "سجّل دخولك أول حتى تنحسب النقاط باسمك",
   no_fill: "ماكو إعلانات متوفرة هسه، جرّب بعد شوية",
@@ -43,6 +47,7 @@ function PointsPage() {
   const [adBusy, setAdBusy] = useState(false);
   const [unlocking, setUnlocking] = useState<string | null>(null);
   const [native, setNative] = useState(false);
+  const { accent, setAccent } = useTheme();
   const rewarded = useRef(false);
   const totalBefore = useRef(0);
 
@@ -173,12 +178,37 @@ function PointsPage() {
           )}
         </section>
 
+        {/* اختيار الثيم (بعد فتح ميزة الثيمات) */}
+        {unlocked.has("themes") ? (
+          <section className="rounded-3xl border-2 border-line bg-cream p-4">
+            <h2 className="font-display text-lg font-extrabold">🎨 ثيم الألوان</h2>
+            <p className="text-[12px] text-muted-ink">اختار اللون اللي يعجبك، ويتغيّر التطبيق كله فوراً</p>
+            <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-6">
+              {ACCENTS.map((a) => (
+                <button
+                  key={a.id}
+                  type="button"
+                  onClick={() => setAccent(a.id)}
+                  aria-pressed={accent === a.id}
+                  className={`flex flex-col items-center gap-1.5 rounded-2xl border-2 p-2 transition-colors ${
+                    accent === a.id ? "border-ink bg-ink/5" : "border-line/60 hover:border-line"
+                  }`}
+                >
+                  <span className="size-9 rounded-full ring-2 ring-cream" style={{ background: a.swatch }} />
+                  <span className="text-[12px] font-semibold">{a.label}</span>
+                </button>
+              ))}
+            </div>
+          </section>
+        ) : null}
+
         {/* متجر الميزات */}
         <section>
           <h2 className="mb-2 font-display text-lg font-extrabold">متجر الميزات</h2>
           <div className="space-y-2">
             {prices.map((f) => {
               const isOpen = unlocked.has(f.feature);
+              const ready = READY_FEATURES.has(f.feature);
               const affordable = balance >= f.cost;
               const missing = Math.max(0, f.cost - balance);
               return (
@@ -194,17 +224,23 @@ function PointsPage() {
                   <div className="min-w-0 flex-1">
                     <p className="break-words text-sm font-semibold leading-snug">{f.title}</p>
                     <p className="text-[12px] text-muted-ink">
-                      {isOpen ? "مفتوحة عندك ✅" : affordable ? `${f.cost} نقطة` : `${f.cost} نقطة · باقي لك ${missing}`}
+                      {isOpen
+                        ? "مفتوحة عندك ✅"
+                        : !ready
+                          ? `${f.cost} نقطة · قريباً 🔜`
+                          : affordable
+                            ? `${f.cost} نقطة`
+                            : `${f.cost} نقطة · باقي لك ${missing}`}
                     </p>
                   </div>
                   {isOpen ? null : (
                     <button
                       type="button"
                       onClick={() => void unlock(f)}
-                      disabled={!affordable || unlocking !== null}
+                      disabled={!ready || !affordable || unlocking !== null}
                       className="shrink-0 rounded-full border-2 border-line bg-butter px-4 py-1.5 text-sm font-bold text-butter-ink disabled:bg-transparent disabled:text-muted-ink disabled:opacity-60"
                     >
-                      {unlocking === f.feature ? "…" : affordable ? "افتح" : "🔒"}
+                      {unlocking === f.feature ? "…" : !ready ? "قريباً" : affordable ? "افتح" : "🔒"}
                     </button>
                   )}
                 </div>
@@ -217,7 +253,7 @@ function PointsPage() {
             ) : null}
           </div>
           <p className="mt-3 text-center text-[11px] text-muted-ink">
-            الميزات راح تشتغل بالتطبيق تدريجياً، وكل ميزة تفتحها هسه تبقى إلك.
+            الميزات اللي مكتوب عليها «قريباً» دا نبنيها، وتنفتح للشراء أول ما تجهز.
           </p>
         </section>
       </div>

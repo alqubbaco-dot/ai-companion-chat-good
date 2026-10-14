@@ -113,6 +113,134 @@
   --code-fg: oklch(0.94 0.004 286.0);
 }
 
+
+/* ───────── ثيمات الألوان (ميزة تنفتح بالنقاط) ───────── */
+
+:root[data-accent="emerald"]:not(.dark) {
+  --paper: oklch(0.965 0.008 160);
+  --cream: oklch(0.985 0.005 160);
+  --ink: oklch(0.18 0.02 160);
+  --line: oklch(0.85 0.015 160);
+  --muted-ink: oklch(0.5 0.02 160);
+  --butter: oklch(0.56 0.19 160);
+  --butter-ink: oklch(0.99 0.002 160);
+  --teal: oklch(0.6 0.15 175);
+  --brand-from: oklch(0.7 0.15 175);
+  --brand-to: oklch(0.56 0.21 160);
+}
+:root.dark[data-accent="emerald"] {
+  --paper: oklch(0.14 0.014 160);
+  --cream: oklch(0.19 0.018 160);
+  --ink: oklch(0.96 0.006 160);
+  --line: oklch(0.29 0.02 160);
+  --muted-ink: oklch(0.68 0.015 160);
+  --butter: oklch(0.72 0.17 160);
+  --butter-ink: oklch(0.14 0.014 160);
+  --teal: oklch(0.72 0.15 175);
+  --brand-from: oklch(0.66 0.15 175);
+  --brand-to: oklch(0.55 0.21 160);
+}
+
+:root[data-accent="rose"]:not(.dark) {
+  --paper: oklch(0.965 0.008 0);
+  --cream: oklch(0.985 0.005 0);
+  --ink: oklch(0.18 0.02 0);
+  --line: oklch(0.85 0.015 0);
+  --muted-ink: oklch(0.5 0.02 0);
+  --butter: oklch(0.56 0.22 0);
+  --butter-ink: oklch(0.99 0.002 0);
+  --teal: oklch(0.6 0.18 350);
+  --brand-from: oklch(0.7 0.18 350);
+  --brand-to: oklch(0.56 0.24 0);
+}
+:root.dark[data-accent="rose"] {
+  --paper: oklch(0.14 0.014 0);
+  --cream: oklch(0.19 0.018 0);
+  --ink: oklch(0.96 0.006 0);
+  --line: oklch(0.29 0.02 0);
+  --muted-ink: oklch(0.68 0.015 0);
+  --butter: oklch(0.72 0.20 0);
+  --butter-ink: oklch(0.14 0.014 0);
+  --teal: oklch(0.72 0.18 350);
+  --brand-from: oklch(0.66 0.18 350);
+  --brand-to: oklch(0.55 0.24 0);
+}
+
+:root[data-accent="sunset"]:not(.dark) {
+  --paper: oklch(0.965 0.008 45);
+  --cream: oklch(0.985 0.005 45);
+  --ink: oklch(0.18 0.02 45);
+  --line: oklch(0.85 0.015 45);
+  --muted-ink: oklch(0.5 0.02 45);
+  --butter: oklch(0.56 0.20 45);
+  --butter-ink: oklch(0.99 0.002 45);
+  --teal: oklch(0.6 0.16 30);
+  --brand-from: oklch(0.7 0.16 30);
+  --brand-to: oklch(0.56 0.22 45);
+}
+:root.dark[data-accent="sunset"] {
+  --paper: oklch(0.14 0.014 45);
+  --cream: oklch(0.19 0.018 45);
+  --ink: oklch(0.96 0.006 45);
+  --line: oklch(0.29 0.02 45);
+  --muted-ink: oklch(0.68 0.015 45);
+  --butter: oklch(0.72 0.18 45);
+  --butter-ink: oklch(0.14 0.014 45);
+  --teal: oklch(0.72 0.16 30);
+  --brand-from: oklch(0.66 0.16 30);
+  --brand-to: oklch(0.55 0.22 45);
+}
+
+:root[data-accent="ocean"]:not(.dark) {
+  --paper: oklch(0.965 0.008 225);
+  --cream: oklch(0.985 0.005 225);
+  --ink: oklch(0.18 0.02 225);
+  --line: oklch(0.85 0.015 225);
+  --muted-ink: oklch(0.5 0.02 225);
+  --butter: oklch(0.56 0.20 225);
+  --butter-ink: oklch(0.99 0.002 225);
+  --teal: oklch(0.6 0.16 200);
+  --brand-from: oklch(0.7 0.16 200);
+  --brand-to: oklch(0.56 0.22 225);
+}
+:root.dark[data-accent="ocean"] {
+  --paper: oklch(0.14 0.014 225);
+  --cream: oklch(0.19 0.018 225);
+  --ink: oklch(0.96 0.006 225);
+  --line: oklch(0.29 0.02 225);
+  --muted-ink: oklch(0.68 0.015 225);
+  --butter: oklch(0.72 0.18 225);
+  --butter-ink: oklch(0.14 0.014 225);
+  --teal: oklch(0.72 0.16 200);
+  --brand-from: oklch(0.66 0.16 200);
+  --brand-to: oklch(0.55 0.22 225);
+}
+
+:root[data-accent="midnight"]:not(.dark) {
+  --paper: oklch(0.965 0.008 300);
+  --cream: oklch(0.985 0.005 300);
+  --ink: oklch(0.18 0.02 300);
+  --line: oklch(0.85 0.015 300);
+  --muted-ink: oklch(0.5 0.02 300);
+  --butter: oklch(0.56 0.24 300);
+  --butter-ink: oklch(0.99 0.002 300);
+  --teal: oklch(0.6 0.20 320);
+  --brand-from: oklch(0.7 0.20 320);
+  --brand-to: oklch(0.56 0.26 300);
+}
+:root.dark[data-accent="midnight"] {
+  --paper: oklch(0.14 0.014 300);
+  --cream: oklch(0.19 0.018 300);
+  --ink: oklch(0.96 0.006 300);
+  --line: oklch(0.29 0.02 300);
+  --muted-ink: oklch(0.68 0.015 300);
+  --butter: oklch(0.72 0.22 300);
+  --butter-ink: oklch(0.14 0.014 300);
+  --teal: oklch(0.72 0.20 320);
+  --brand-from: oklch(0.66 0.20 320);
+  --brand-to: oklch(0.55 0.26 300);
+}
+
 @keyframes rise {
   from {
     opacity: 0;
