@@ -1,8 +1,14 @@
 import { createServerFn } from "@tanstack/react-start";
+import { createClient } from "@supabase/supabase-js";
 
 // هذا الملف يشتغل على السيرفر فقط، فمفتاح Gemini ما يوصل لمتصفح المستخدمين أبداً
 
+// نتأكد إن الطالب مستخدم مسجّل، حتى محد من برّا يستهلك حصة Gemini
+const SUPABASE_URL = "https://etkacphlxhpdjhrvoaqz.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_qwvchdJI-viQlVbiDPtfhg_VG6UOjkk";
+
 type AskInput = {
+  accessToken: string;
   prompt: string;
   lang: "ar" | "en";
   isFunny: boolean;
@@ -64,6 +70,7 @@ export const askGemini = createServerFn({ method: "POST" })
       throw new Error("Invalid prompt");
     }
     return {
+      accessToken: String(input.accessToken ?? "").slice(0, 4000),
       prompt: input.prompt.slice(0, 4000),
       lang: input.lang === "en" ? "en" : "ar",
       isFunny: Boolean(input.isFunny),
@@ -75,6 +82,12 @@ export const askGemini = createServerFn({ method: "POST" })
     if (!apiKey) {
       return { ok: false, error: "missing_key: GEMINI key is not set in Vercel" };
     }
+    if (!data.accessToken) return { ok: false, error: "not signed in" };
+    const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
+    const { data: user, error: authError } = await db.auth.getUser(data.accessToken);
+    if (authError || !user?.user) return { ok: false, error: "not signed in" };
 
     const systemText = data.isFunny
       ? data.lang === "ar" ? FUNNY_AR : FUNNY_EN

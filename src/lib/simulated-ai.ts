@@ -1,5 +1,6 @@
 import type { Lang } from "./i18n";
 import { askGemini } from "./ai-server";
+import { supabase } from "./supabase";
 
 export function titleFromPrompt(prompt: string): string {
   const clean = prompt.replace(/\s+/g, " ").trim();
@@ -22,8 +23,10 @@ export function streamSimulatedReply(
       const timeout = new Promise<never>((_, reject) =>
         setTimeout(() => reject(new Error("client timeout")), 40_000),
       );
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData.session?.access_token ?? "";
       const result = await Promise.race([
-        askGemini({ data: { prompt, lang, isFunny } }),
+        askGemini({ data: { accessToken, prompt, lang, isFunny } }),
         timeout,
       ]);
       if (cancelled) return;
