@@ -7,12 +7,23 @@ export type PrivateConversation = {
   updated_at: string;
 };
 
+export type MessageKind = "text" | "image" | "audio";
+
 export type PrivateMessage = {
   id: string;
   conversation_id: string;
   sender_id: string;
   content: string;
   created_at: string;
+  // للصور والرسائل الصوتية (supabase/chat-media.sql). النسخ القديمة ما بيها هذني
+  kind?: MessageKind;
+  media_path?: string | null;
+  media_duration?: number | null;
+};
+
+export const MEDIA_LABEL: Record<Exclude<MessageKind, "text">, string> = {
+  image: "📷 صورة",
+  audio: "🎤 رسالة صوتية",
 };
 
 export async function getOrCreatePrivateConversation(otherUserId: string): Promise<string> {
@@ -40,7 +51,7 @@ export async function getPrivateConversation(conversationId: string): Promise<Pr
 export async function getPrivateMessages(conversationId: string): Promise<PrivateMessage[]> {
   const { data, error } = await supabase
     .from("private_messages")
-    .select("id,conversation_id,sender_id,content,created_at")
+    .select("*")
     .eq("conversation_id", conversationId)
     .order("created_at", { ascending: true });
   if (error) throw error;
@@ -64,7 +75,7 @@ export async function sendPrivateMessage(
       sender_id: authData.user.id,
       content: trimmed,
     })
-    .select("id,conversation_id,sender_id,content,created_at")
+    .select("*")
     .single();
   if (error) throw error;
   return data as PrivateMessage;
@@ -184,4 +195,116 @@ export function subscribeToAllMyMessages(onMessage: (message: PrivateMessage) =>
   return () => {
     void supabase.removeChannel(channel);
   };
+}
+
+
+// ───────────── الصور والرسائل الصوتية ─────────────
+
+const MEDIA_BUCKET = "chat-media";
+
+function randomId() {
+  try {
+    return crypto.randomUUID();
+  } catch {
+    return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+  }
+}
+
+/** يرفع ملف للمخزن الخاص ويرسل رسالة صورة/صوت */
+export async function sendMediaMessage(
+  conversationId: string,
+  kind: "image" | "audio",
+  file: Blob,
+  options: { ext: string; contentType: string; duration?: number },
+): Promise<PrivateMessage> {
+  const { data: authData, error: authError } = await supabase.auth.getUser();
+  if (authError || !authData.user) throw new Error("Authentication is required");
+
+  const path = `${conversationId}/${randomId()}.${options.ext}`;
+  const { error: uploadError } = await supabase.storage
+    .from(MEDIA_BUCKET)
+    .upload(path, file, { contentType: options.contentType, upsert: false });
+  if (uploadError) throw uploadError;
+
+  const { data, error } = await supabase
+    .from("private_messages")
+    .insert({
+      conversation_id: conversationId,
+      sender_id: authData.user.id,
+      content: MEDIA_LABEL[kind],
+      kind,
+      media_path: path,
+      media_duration: options.duration ? Math.round(options.duration) : null,
+    })
+    .select("*")
+    .single();
+  if (error) {
+    // الرسالة ما انحفظت: نمسح الملف حتى ما يبقى ملف يتيم
+    void supabase.storage.from(MEDIA_BUCKET).remove([path]);
+    throw error;
+  }
+  return data as PrivateMessage;
+}
+
+const urlCache = new Map<string, { url: string; expires: number }>();
+
+/** رابط مؤقت (ساعة) لملف بالمحادثة. بس الطرفين يكدرون ياخذونه */
+export async function getMediaUrl(path: string): Promise<string> {
+  const cached = urlCache.get(path);
+  if (cached && cached.expires > Date.now() + 60_000) return cached.url;
+  const { data, error } = await supabase.storage.from(MEDIA_BUCKET).createSignedUrl(path, 3600);
+  if (error || !data?.signedUrl) throw error || new Error("no url");
+  urlCache.set(path, { url: data.signedUrl, expires: Date.now() + 3600_000 });
+  return data.signedUrl;
+}
+
+/** يصغّر الصورة قبل الرفع: أطول ضلع 1280 بكسل، JPEG لحد ~250 كيلوبايت */
+export async function compressImage(file: File): Promise<Blob> {
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const el = new Image();
+      el.onload = () => resolve(el);
+      el.onerror = () => reject(new Error("bad image"));
+      el.src = url;
+    });
+    const maxSide = 1280;
+    const scale = Math.min(1, maxSide / Math.max(img.naturalWidth, img.naturalHeight));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(img.naturalWidth * scale));
+    canvas.height = Math.max(1, Math.round(img.naturalHeight * scale));
+    const ctx = canvas.getContext("2d");
+    if (!ctx) throw new Error("no canvas");
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+    let quality = 0.8;
+    let blob: Blob | null = null;
+    for (let i = 0; i < 5; i++) {
+      blob = await new Promise<Blob | null>((r) => canvas.toBlob(r, "image/jpeg", quality));
+      if (blob && blob.size <= 250_000) break;
+      quality -= 0.12;
+    }
+    if (!blob) throw new Error("compress failed");
+    return blob;
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
+/** عند حذف الحساب: نمسح الصور والأصوات اللي رفعها المستخدم */
+export async function deleteMyChatMedia(myId: string): Promise<void> {
+  const { data } = await supabase
+    .from("private_messages")
+    .select("media_path")
+    .eq("sender_id", myId)
+    .not("media_path", "is", null)
+    .limit(1000);
+  const paths = ((data || []) as { media_path: string | null }[])
+    .map((row) => row.media_path)
+    .filter((p): p is string => !!p);
+  for (let i = 0; i < paths.length; i += 100) {
+    await supabase.storage.from(MEDIA_BUCKET).remove(paths.slice(i, i + 100));
+  }
 }

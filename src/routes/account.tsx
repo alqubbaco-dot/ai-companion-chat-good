@@ -8,6 +8,7 @@ import { supabase as cloudClient } from "@/lib/supabase";
 import { toast } from "sonner";
 import { useFriends } from "@/lib/friends-store";
 import { friendlyDbError, getMyPhone, saveMyProfile, shareInvite } from "@/lib/cloud-friends";
+import { deleteMyChatMedia } from "@/lib/private-chat";
 
 export const Route = createFileRoute("/account")({
   head: () => ({
@@ -38,6 +39,9 @@ function AccountPage() {
     if (deleteWord.trim() !== "حذف" || isDeleting) return;
     setIsDeleting(true);
     try {
+      // الصور والرسائل الصوتية ما تنحذف تلقائياً ويه الحساب، فنمسحها أول
+      const myId = (await cloudClient.auth.getUser()).data.user?.id;
+      if (myId) await deleteMyChatMedia(myId).catch((e) => console.error("تعذر حذف الوسائط:", e));
       const { error } = await cloudClient.rpc("delete_my_account");
       if (error) throw error;
       clearAll();
