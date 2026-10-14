@@ -36,6 +36,7 @@ export function Sidebar() {
       badge: incoming.length || undefined,
       badgeTone: "alert",
     },
+    { to: "/points", emoji: "⭐", labelKey: "navPoints" },
     { to: "/account", emoji: "👤", labelKey: "navAccount" },
     { to: "/settings", emoji: "⚙️", labelKey: "navSettings" },
   ];

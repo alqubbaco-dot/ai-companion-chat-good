@@ -39,6 +39,16 @@ export function MobileTopBar() {
             {theme === "dark" ? "☀" : "☾"}
           </button>
           <Link
+            to="/points"
+            aria-label={t("navPoints")}
+            className="grid size-9 place-items-center rounded-full text-base text-muted-ink transition-colors hover:bg-ink/5"
+            activeProps={{
+              className: "grid size-9 place-items-center rounded-full text-base bg-butter/15 text-butter",
+            }}
+          >
+            ⭐
+          </Link>
+          <Link
             to="/settings"
             aria-label={t("navSettings")}
             className="grid size-9 place-items-center rounded-full text-base text-muted-ink transition-colors hover:bg-ink/5"
