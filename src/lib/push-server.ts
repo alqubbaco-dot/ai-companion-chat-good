@@ -22,7 +22,7 @@ type PushInput = {
   tag: string;
 };
 
-export type PushResult = { ok: true; sent: number } | { ok: false; error: string };
+export type PushResult = { ok: true; sent: number; devices: number; errors: string[] } | { ok: false; error: string };
 
 const clip = (value: unknown, max: number) => String(value ?? "").slice(0, max);
 
@@ -55,7 +55,8 @@ export const sendPushToFriend = createServerFn({ method: "POST" })
     const { data: targets, error } = await db.rpc("push_targets", { target_user: data.targetId });
     if (error) return { ok: false, error: error.message };
     const list = (targets || []) as { endpoint: string; p256dh: string; auth: string }[];
-    if (list.length === 0) return { ok: true, sent: 0 };
+    if (list.length === 0) return { ok: true, sent: 0, devices: 0, errors: [] };
+    const errors: string[] = [];
 
     const message = {
       kind: data.kind,
@@ -74,11 +75,17 @@ export const sendPushToFriend = createServerFn({ method: "POST" })
         if (sub.endpoint.startsWith("fcm:")) {
           const result = await sendFcm(env, sub.endpoint.slice(4), message);
           if (result === "sent") sent += 1;
-          else if (result === "gone") await db.rpc("prune_push_subscription", { p_endpoint: sub.endpoint });
+          else if (result === "gone") {
+            errors.push("android device expired");
+            await db.rpc("prune_push_subscription", { p_endpoint: sub.endpoint });
+          } else errors.push(result);
           return;
         }
         // المتصفح: Web Push
-        if (!vapidKey) return;
+        if (!vapidKey) {
+          errors.push("VAPID_PRIVATE_KEY missing");
+          return;
+        }
         try {
           await webpush.sendNotification(
             { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
@@ -92,11 +99,12 @@ export const sendPushToFriend = createServerFn({ method: "POST" })
             await db.rpc("prune_push_subscription", { p_endpoint: sub.endpoint });
           } else {
             console.error("push failed", status, err);
+            errors.push(`web push ${status ?? "error"}`);
           }
         }
       }),
     );
-    return { ok: true, sent };
+    return { ok: true, sent, devices: list.length, errors };
   });
 
 // ───────────── Firebase Cloud Messaging (تطبيق الأندرويد) ─────────────
@@ -158,11 +166,11 @@ async function sendFcm(
   env: Record<string, string | undefined>,
   token: string,
   message: Record<string, string>,
-): Promise<"sent" | "gone" | "failed"> {
+): Promise<string> {
   const sa = readServiceAccount(env);
   if (!sa) {
     console.error("FIREBASE_SERVICE_ACCOUNT is not set");
-    return "failed";
+    return env.FIREBASE_SERVICE_ACCOUNT ? "FIREBASE_SERVICE_ACCOUNT invalid JSON" : "FIREBASE_SERVICE_ACCOUNT missing";
   }
   try {
     const access = await getAccessToken(sa);
@@ -182,9 +190,9 @@ async function sendFcm(
     const text = await res.text();
     if (res.status === 404 || text.includes("UNREGISTERED")) return "gone";
     console.error("fcm failed", res.status, text);
-    return "failed";
+    return `fcm ${res.status}: ${text.slice(0, 120)}`;
   } catch (err) {
     console.error("fcm error", err);
-    return "failed";
+    return `fcm error: ${err instanceof Error ? err.message.slice(0, 120) : "unknown"}`;
   }
 }

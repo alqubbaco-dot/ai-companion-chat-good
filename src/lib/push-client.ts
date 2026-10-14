@@ -123,14 +123,19 @@ export async function notifyFriend(
   body: string,
   url: string,
   tag: string,
-): Promise<void> {
+): Promise<{ sent: number; devices: number; reason: string }> {
   try {
     const { data } = await supabase.auth.getSession();
     const accessToken = data.session?.access_token;
-    if (!accessToken || !targetId) return;
+    if (!accessToken || !targetId) return { sent: 0, devices: 0, reason: "no session" };
     const result = await sendPushToFriend({ data: { accessToken, targetId, kind, title, body, url, tag } });
-    if (!result.ok) console.warn("push:", result.error);
+    if (!result.ok) {
+      console.warn("push:", result.error);
+      return { sent: 0, devices: 0, reason: result.error };
+    }
+    return { sent: result.sent, devices: result.devices, reason: result.errors.join(" | ") };
   } catch (err) {
     console.warn("تعذر إرسال الإشعار:", err);
+    return { sent: 0, devices: 0, reason: err instanceof Error ? err.message : "error" };
   }
 }

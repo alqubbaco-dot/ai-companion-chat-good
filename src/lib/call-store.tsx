@@ -387,7 +387,15 @@ export function CallProvider({ children }: { children: ReactNode }) {
           "اضغط حتى ترد على المكالمة",
           `/friends?call=${encodeURIComponent(info.callId)}&from=${encodeURIComponent(myId)}`,
           `call-${info.callId}`,
-        );
+        ).then((r) => {
+          // نوضّح للمتصل إذا الإشعار ما وصل لتلفون صديقه
+          if (r.sent > 0) return;
+          if (r.devices === 0) {
+            toast.info("صديقك ما مفعّل الإشعارات، يرن بس إذا التطبيق مفتوح عنده", { duration: 6000 });
+          } else {
+            toast.error(`ما وصل إشعار المكالمة: ${r.reason || "سبب غير معروف"}`, { duration: 10000 });
+          }
+        });
         ringerRef.current = createRinger("outgoing");
         ringerRef.current.start();
         ringTimeoutRef.current = setTimeout(() => {
