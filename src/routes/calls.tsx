@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { PageBody } from "@/components/app/AppShell";
 import { useFriends } from "@/lib/friends-store";
 import { useCall } from "@/lib/call-store";
@@ -80,10 +80,6 @@ function CallsPage() {
   return (
     <PageBody title="سجل المكالمات" subtitle="مكالماتك الصادرة والواردة والفائتة">
       <div className="mx-auto w-full max-w-3xl space-y-2">
-        <Link to="/friends" className="inline-block text-sm text-teal">
-          → رجوع للأصدقاء
-        </Link>
-
         {loading ? <p className="py-6 text-center text-sm text-muted-ink">لحظة…</p> : null}
         {error ? <p className="py-6 text-center text-sm text-coral">{error}</p> : null}
         {!loading && !error && logs.length === 0 ? (
@@ -107,8 +103,8 @@ function CallsPage() {
                 {name.charAt(0)}
               </div>
               <div className="min-w-0 flex-1">
-                <p className={`truncate text-sm font-semibold ${missed ? "text-red-600" : "text-ink"}`}>{name}</p>
-                <p className={`truncate text-[12px] ${missed ? "text-red-600" : "text-muted-ink"}`}>
+                <p className={`break-words text-sm font-semibold leading-snug ${missed ? "text-red-600" : "text-ink"}`}>{name}</p>
+                <p className={`text-[12px] leading-snug ${missed ? "text-red-600" : "text-muted-ink"}`}>
                   <span className="me-1">{mine ? "↗" : "↙"}</span>
                   {log.video ? "📹 " : "📞 "}
                   {label}
@@ -118,7 +114,7 @@ function CallsPage() {
                 </p>
                 <p className="text-[11px] text-muted-ink">{formatWhen(log.started_at)}</p>
               </div>
-              <div className="flex shrink-0 items-center gap-1.5">
+              <div className="flex shrink-0 flex-col items-center gap-1.5">
                 <button
                   type="button"
                   onClick={() => void startCall(otherId, name, true)}
