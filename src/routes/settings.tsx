@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { PageBody } from "@/components/app/AppShell";
 import { useI18n, type Lang } from "@/lib/i18n";
@@ -176,13 +176,12 @@ function SettingsPage() {
           
           <div className="mt-4 pt-3 border-t border-line/30 flex items-center justify-between">
             <span className="text-xs text-muted-ink">{lang === "ar" ? "📜 سياسة الخصوصية والتطبيق" : "📜 Application Policy"}</span>
-            <button
-              type="button"
-              onClick={() => toast.info(lang === "ar" ? "سيتم كتابة بنود السياسة لاحقاً عند التوصيل السحابي." : "Policy details will be written later.")}
+            <Link
+              to="/privacy"
               className="text-xs font-bold text-ink underline hover:text-muted-ink"
             >
-              {lang === "ar" ? "عرض السياسة (قريباً)" : "View Policy (Soon)"}
-            </button>
+              {lang === "ar" ? "عرض السياسة" : "View Policy"}
+            </Link>
           </div>
         </section>
 
