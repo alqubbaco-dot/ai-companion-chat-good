@@ -134,6 +134,45 @@ async function ensureTurnServers(timeoutMs = 3000): Promise<void> {
   await Promise.race([turnLoading, new Promise((r) => setTimeout(r, timeoutMs))]);
 }
 
+// ── تذكرة الدخول: نتأكد إنها صالحة قبل المكالمة ──
+// بعد ما ينام التطبيق فترة طويلة، تكون التذكرة منتهية والتجديد التلقائي بعده ما خلص،
+// فيترفض الإشعار وفتح الخط. هنا نجددها بأنفسنا ونسلّمها لخط الاتصال المباشر.
+async function ensureFreshSession(): Promise<void> {
+  try {
+    const { data } = await supabase.auth.getSession();
+    let session = data.session;
+    if (!session) return;
+    const expiresAt = (session.expires_at ?? 0) * 1000;
+    if (expiresAt - Date.now() < 2 * 60_000) {
+      const { data: refreshed, error } = await supabase.auth.refreshSession();
+      if (error) console.warn("تعذر تجديد الجلسة:", error.message);
+      else if (refreshed.session) session = refreshed.session;
+    }
+    await supabase.realtime.setAuth(session.access_token);
+  } catch (err) {
+    console.warn("ensureFreshSession failed", err);
+  }
+}
+
+// خط الاتصال المباشر (Realtime) ينقطع لما التلفون ينام: نرجّعه
+function ensureRealtimeConnected() {
+  try {
+    if (!supabase.realtime.isConnected()) supabase.realtime.connect();
+  } catch (err) {
+    console.warn("realtime reconnect failed", err);
+  }
+}
+
+// سبب الفشل بكلمات بسيطة، حتى نعرف وين المشكلة
+function describeCallError(err: unknown): string {
+  const name = err instanceof DOMException ? err.name : "";
+  const message = err instanceof Error ? err.message : String(err ?? "");
+  if (name === "NotReadableError" || name === "AbortError") return "المايكروفون مشغول بتطبيق ثاني";
+  if (name === "NotFoundError") return "ما لگينا مايكروفون";
+  if (/signal-timeout|TIMED_OUT|CHANNEL_ERROR|CLOSED/.test(message)) return "خط الاتصال ما اشتغل";
+  return message ? message.slice(0, 60) : "سبب غير معروف";
+}
+
 // ── السبيكر عن طريق تطبيق الأندرويد ──
 type AudioBridge = { callAudio?: (active: boolean) => void; setSpeaker?: (on: boolean) => void };
 function audioBridge(): AudioBridge | null {
@@ -211,6 +250,22 @@ export function CallProvider({ children }: { children: ReactNode }) {
     if (myId) void ensureTurnServers(10_000);
   }, [myId]);
 
+  // رجعنا للتطبيق من الخلفية: نجدد التذكرة والخط فوراً حتى توصل المكالمات ونگدر نتصل
+  useEffect(() => {
+    if (!myId || typeof document === "undefined") return;
+    const onVisible = () => {
+      if (document.visibilityState !== "visible") return;
+      ensureRealtimeConnected();
+      void ensureFreshSession();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("online", onVisible);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("online", onVisible);
+    };
+  }, [myId]);
+
   const [phase, setPhase] = useState<CallPhase>("idle");
   const [call, setCall] = useState<CallInfo | null>(null);
   const [muted, setMuted] = useState(false);
@@ -263,21 +318,38 @@ export function CallProvider({ children }: { children: ReactNode }) {
       void supabase.removeChannel(peerChannelRef.current);
       peerChannelRef.current = null;
     }
-    const channel = supabase.channel(`call:${peerId}`, {
-      config: { broadcast: { self: false, ack: true } },
-    });
-    await new Promise<void>((resolve, reject) => {
-      const timer = setTimeout(() => reject(new Error("signal-timeout")), 10_000);
-      channel.subscribe((status) => {
-        if (status === "SUBSCRIBED") {
-          clearTimeout(timer);
-          resolve();
-        } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
-          clearTimeout(timer);
-          reject(new Error(status));
-        }
+    const join = (timeoutMs: number) => {
+      const channel = supabase.channel(`call:${peerId}`, {
+        config: { broadcast: { self: false, ack: true } },
       });
-    });
+      return new Promise<RealtimeChannel>((resolve, reject) => {
+        // نشيل القناة الفاشلة بالكامل قبل ما نعيد، حتى المحاولة الثانية تبدي نظيفة
+        const fail = (reason: string) => {
+          void supabase.removeChannel(channel).finally(() => reject(new Error(reason)));
+        };
+        const timer = setTimeout(() => fail("signal-timeout"), timeoutMs);
+        channel.subscribe((status) => {
+          if (status === "SUBSCRIBED") {
+            clearTimeout(timer);
+            resolve(channel);
+          } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
+            clearTimeout(timer);
+            fail(status);
+          }
+        });
+      });
+    };
+    ensureRealtimeConnected();
+    let channel: RealtimeChannel;
+    try {
+      channel = await join(6_000);
+    } catch (err) {
+      // المحاولة الأولى فشلت (غالباً الخط انقطع وقت النوم): نجدد كل شي ونعيد مرة وحدة
+      console.warn("peer channel failed, retrying", err);
+      await ensureFreshSession();
+      ensureRealtimeConnected();
+      channel = await join(10_000);
+    }
     peerChannelRef.current = channel;
     peerChannelPeerRef.current = peerId;
     return channel;
@@ -474,6 +546,11 @@ export function CallProvider({ children }: { children: ReactNode }) {
       setEndedReason(null);
       updatePhase("outgoing");
 
+      // نجدد تذكرة الدخول والخط قبل كل شي (التطبيق يمكن جان نايم)
+      ensureRealtimeConnected();
+      await ensureFreshSession();
+      if (callRef.current?.callId !== info.callId) return; // سكّر الخط وإحنا نجدد
+
       // إشعار Push أول شي، حتى يبدأ تلفون صديقك يرن وإحنا بعدنا نجهّز المايك والشبكة
       // (لو فتح التطبيق من الإشعار قبل ما نخلص، يوصله الطلب أول ما نرسله)
       const myName = profile.name || "صديق";
@@ -487,7 +564,6 @@ export function CallProvider({ children }: { children: ReactNode }) {
       ).then((r) => {
         // نوضّح للمتصل إذا الإشعار ما وصل لتلفون صديقه
         if (r.sent > 0) return;
-        if (callRef.current?.callId !== info.callId) return; // المكالمة انتهت أصلاً
         if (r.devices === 0) {
           toast.info("صديقك ما مفعّل الإشعارات، يرن بس إذا التطبيق مفتوح عنده", { duration: 6000 });
         } else {
@@ -532,7 +608,7 @@ export function CallProvider({ children }: { children: ReactNode }) {
         cleanup(
           name === "NotAllowedError"
             ? "لازم تسمح للتطبيق يستخدم المايكروفون"
-            : "تعذر بدء المكالمة، تأكد من الإنترنت",
+            : `تعذر بدء المكالمة: ${describeCallError(err)}`,
         );
       }
     },
