@@ -34,6 +34,7 @@ function RoundButton({
   tone = "glass",
   disabled,
   big,
+  compact,
 }: {
   onClick: () => void;
   label: string;
@@ -41,6 +42,8 @@ function RoundButton({
   tone?: "glass" | "white" | "red" | "green";
   disabled?: boolean;
   big?: boolean;
+  /** أزرار أصغر شوية حتى تكفي 5 أزرار بعرض التلفون (مكالمة الفيديو) */
+  compact?: boolean;
 }) {
   const tones = {
     glass: "bg-white/15 text-white",
@@ -49,19 +52,19 @@ function RoundButton({
     green: "bg-emerald-500 text-white",
   } as const;
   return (
-    <div className="flex flex-col items-center gap-2">
+    <div className="flex min-w-0 flex-col items-center gap-1.5">
       <button
         type="button"
         onClick={onClick}
         disabled={disabled}
         aria-label={label}
         className={`grid place-items-center rounded-full shadow-lg transition-transform active:scale-95 disabled:opacity-40 ${
-          big ? "size-16 text-2xl" : "size-14 text-xl"
+          compact ? (big ? "size-14 text-xl" : "size-12 text-lg") : big ? "size-16 text-2xl" : "size-14 text-xl"
         } ${tones[tone]}`}
       >
         {children}
       </button>
-      <span className="text-xs text-white/80">{label}</span>
+      <span className="whitespace-nowrap text-[11px] text-white/85 drop-shadow">{label}</span>
     </div>
   );
 }
@@ -94,6 +97,8 @@ export function CallOverlay() {
   const hasLocalVideo = Boolean(localStream && localStream.getVideoTracks().length > 0);
   const hasRemoteVideo = Boolean(remoteStream && remoteStream.getVideoTracks().length > 0);
   const showRemoteVideo = isVideo && hasRemoteVideo && (phase === "active" || phase === "connecting");
+  // بمكالمة الفيديو أكو 5 أزرار: نصغّرها شوية حتى كلها تبين بالشاشة
+  const compactControls = isVideo && hasLocalVideo;
 
   const status =
     phase === "outgoing"
@@ -118,7 +123,7 @@ export function CallOverlay() {
       {visible ? (
         <div
           dir="rtl"
-          className="fixed inset-0 z-[100] flex flex-col items-center justify-between overflow-hidden bg-gradient-to-b from-[#0f1340] via-[#1b1f5c] to-[#2b145c] px-6 pb-12 pt-16 text-white"
+          className={`fixed inset-0 z-[100] flex flex-col items-center justify-between overflow-hidden bg-gradient-to-b from-[#0f1340] via-[#1b1f5c] to-[#2b145c] pb-10 pt-16 text-white ${compactControls ? "px-3" : "px-6"}`}
         >
           {/* فيديو الصديق بملء الشاشة */}
           {showRemoteVideo ? (
@@ -138,7 +143,7 @@ export function CallOverlay() {
 
           <div
             className={`relative z-10 flex flex-col items-center gap-3 text-center ${
-              showRemoteVideo ? "rounded-2xl bg-black/35 px-4 py-2 backdrop-blur-sm" : ""
+              showRemoteVideo ? "self-start rounded-2xl bg-black/35 px-4 py-2 backdrop-blur-sm" : ""
             }`}
           >
             {!showRemoteVideo ? (
@@ -167,10 +172,14 @@ export function CallOverlay() {
           ) : phase === "ended" ? (
             <div className="h-16" />
           ) : (
-            <div className="relative z-10 flex items-end gap-5">
+            <div
+              className={`relative z-10 flex w-full items-end ${
+                compactControls ? "max-w-sm justify-between gap-1 rounded-3xl bg-black/30 px-2 py-3 backdrop-blur-sm" : "justify-center gap-5"
+              }`}
+            >
               <RoundButton
                 onClick={toggleMute}
-                label={muted ? "مكتوم" : "كتم"}
+                label={muted ? "مكتوم" : "كتم"} compact={compactControls}
                 tone={muted ? "white" : "glass"}
                 disabled={phase === "outgoing"}
               >
@@ -179,7 +188,7 @@ export function CallOverlay() {
               {canToggleSpeaker ? (
                 <RoundButton
                   onClick={toggleSpeaker}
-                  label={speaker ? "السبيكر" : "سبيكر"}
+                  label={speaker ? "السبيكر" : "سبيكر"} compact={compactControls}
                   tone={speaker ? "white" : "glass"}
                 >
                   {speaker ? "🔊" : "🔈"}
@@ -187,15 +196,15 @@ export function CallOverlay() {
               ) : null}
               {isVideo && hasLocalVideo ? (
                 <>
-                  <RoundButton onClick={toggleCamera} label={cameraOff ? "الكاميرا مطفية" : "الكاميرا"} tone={cameraOff ? "white" : "glass"}>
+                  <RoundButton onClick={toggleCamera} label={cameraOff ? "الكاميرا مطفية" : "الكاميرا"} compact={compactControls} tone={cameraOff ? "white" : "glass"}>
                     {cameraOff ? "🚫" : "📷"}
                   </RoundButton>
-                  <RoundButton onClick={() => void switchCamera()} label="تبديل">
+                  <RoundButton onClick={() => void switchCamera()} label="تبديل" compact={compactControls}>
                     🔄
                   </RoundButton>
                 </>
               ) : null}
-              <RoundButton onClick={hangUp} label="إنهاء" tone="red" big>
+              <RoundButton onClick={hangUp} label="إنهاء" tone="red" big compact={compactControls}>
                 <span className="rotate-[135deg]">📞</span>
               </RoundButton>
             </div>
