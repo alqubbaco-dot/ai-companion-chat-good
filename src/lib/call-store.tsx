@@ -474,6 +474,27 @@ export function CallProvider({ children }: { children: ReactNode }) {
       setEndedReason(null);
       updatePhase("outgoing");
 
+      // إشعار Push أول شي، حتى يبدأ تلفون صديقك يرن وإحنا بعدنا نجهّز المايك والشبكة
+      // (لو فتح التطبيق من الإشعار قبل ما نخلص، يوصله الطلب أول ما نرسله)
+      const myName = profile.name || "صديق";
+      void notifyFriend(
+        peerId,
+        "call",
+        video ? `📹 مكالمة فيديو من ${myName}` : `📞 مكالمة من ${myName}`,
+        "اضغط حتى ترد على المكالمة",
+        `/friends?call=${encodeURIComponent(info.callId)}&from=${encodeURIComponent(myId)}`,
+        `call-${info.callId}`,
+      ).then((r) => {
+        // نوضّح للمتصل إذا الإشعار ما وصل لتلفون صديقه
+        if (r.sent > 0) return;
+        if (callRef.current?.callId !== info.callId) return; // المكالمة انتهت أصلاً
+        if (r.devices === 0) {
+          toast.info("صديقك ما مفعّل الإشعارات، يرن بس إذا التطبيق مفتوح عنده", { duration: 6000 });
+        } else {
+          toast.error(`ما وصل إشعار المكالمة: ${r.reason || "سبب غير معروف"}`, { duration: 10000 });
+        }
+      });
+
       try {
         const [stream] = await Promise.all([getMedia(video), ensureTurnServers()]);
         await openPeerChannel(peerId);
@@ -493,24 +514,6 @@ export function CallProvider({ children }: { children: ReactNode }) {
           sdp: { type: offer.type, sdp: offer.sdp },
           video,
         });
-        // إشعار Push حتى يرن تلفونه لو التطبيق مسكّر
-        const myName = profile.name || "صديق";
-        void notifyFriend(
-          peerId,
-          "call",
-          video ? `📹 مكالمة فيديو من ${myName}` : `📞 مكالمة من ${myName}`,
-          "اضغط حتى ترد على المكالمة",
-          `/friends?call=${encodeURIComponent(info.callId)}&from=${encodeURIComponent(myId)}`,
-          `call-${info.callId}`,
-        ).then((r) => {
-          // نوضّح للمتصل إذا الإشعار ما وصل لتلفون صديقه
-          if (r.sent > 0) return;
-          if (r.devices === 0) {
-            toast.info("صديقك ما مفعّل الإشعارات، يرن بس إذا التطبيق مفتوح عنده", { duration: 6000 });
-          } else {
-            toast.error(`ما وصل إشعار المكالمة: ${r.reason || "سبب غير معروف"}`, { duration: 10000 });
-          }
-        });
         ringerRef.current = createRinger("outgoing");
         ringerRef.current.start();
         ringTimeoutRef.current = setTimeout(() => {
@@ -522,6 +525,8 @@ export function CallProvider({ children }: { children: ReactNode }) {
         }, RING_TIMEOUT_MS);
       } catch (err) {
         console.error("فشل بدء المكالمة:", err);
+        // الإشعار انرسل قبل التجهيز: نوقف رنين تلفون صديقك
+        notifyMissed(info);
         loggedRef.current = info.callId; // المكالمة ما بدت أصلاً: ما نسجّلها
         const name = err instanceof DOMException ? err.name : "";
         cleanup(
