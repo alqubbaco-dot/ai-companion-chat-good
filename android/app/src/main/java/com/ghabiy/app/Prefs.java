@@ -32,6 +32,31 @@ final class Prefs {
         sp(c).edit().putBoolean("asked_fsi", true).apply();
     }
 
+    // شاشة "تجهيز التلفون" انعرضت أول مرة
+    static boolean setupDone(Context c) {
+        return sp(c).getBoolean("setup_done", false);
+    }
+
+    static void setSetupDone(Context c) {
+        sp(c).edit().putBoolean("setup_done", true).apply();
+    }
+
+    static boolean autostartDone(Context c) {
+        return sp(c).getBoolean("autostart_done", false);
+    }
+
+    static void setAutostartDone(Context c) {
+        sp(c).edit().putBoolean("autostart_done", true).apply();
+    }
+
+    static boolean contactsDeclined(Context c) {
+        return sp(c).getBoolean("contacts_declined", false);
+    }
+
+    static void setContactsDeclined(Context c, boolean v) {
+        sp(c).edit().putBoolean("contacts_declined", v).apply();
+    }
+
     static int skippedVersion(Context c) {
         return sp(c).getInt("skipped_version", -1);
     }

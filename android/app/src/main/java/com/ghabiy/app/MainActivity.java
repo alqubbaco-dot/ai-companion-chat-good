@@ -128,7 +128,12 @@ public class MainActivity extends Activity {
             }
         });
 
-        requestStartupPermissions();
+        // أول مرة بعد التنصيب: شاشة تجهيز التلفون (أذونات + البطارية + التشغيل التلقائي)
+        if (!Prefs.setupDone(this)) {
+            startActivity(new Intent(this, SetupActivity.class));
+        } else {
+            requestStartupPermissions();
+        }
 
         FirebaseMessaging.getInstance().getToken().addOnSuccessListener(token -> {
             Prefs.setToken(this, token);
@@ -337,6 +342,24 @@ public class MainActivity extends Activity {
         @JavascriptInterface
         public void setSpeaker(boolean on) {
             runOnUiThread(() -> CallAudio.setSpeaker(MainActivity.this, on));
+        }
+
+        /** فتح شاشة تجهيز التلفون (من صفحة الإعدادات) */
+        @JavascriptInterface
+        public void openSetup() {
+            runOnUiThread(() -> startActivity(new Intent(MainActivity.this, SetupActivity.class)));
+        }
+
+        /** هل المستخدم سمح بقراءة جهات الاتصال؟ */
+        @JavascriptInterface
+        public boolean contactsAllowed() {
+            return Contacts.allowed(MainActivity.this);
+        }
+
+        /** أرقام جهات الاتصال للمطابقة: [["رقم","اسم"], ...] */
+        @JavascriptInterface
+        public String getContacts() {
+            return Contacts.readJson(MainActivity.this);
         }
 
         @JavascriptInterface

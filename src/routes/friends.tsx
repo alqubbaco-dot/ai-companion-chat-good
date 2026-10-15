@@ -12,6 +12,13 @@ import {
   subscribeToAllMyMessages,
   type FriendChatSummary,
 } from "@/lib/private-chat";
+import {
+  contactsAllowed,
+  findContactsOnApp,
+  openPhoneSetup,
+  canOpenPhoneSetup,
+  type ContactMatch,
+} from "@/lib/phone-setup";
 
 // وقت آخر رسالة بأسلوب الواتساب: اليوم = الساعة، أمس، أيام الأسبوع، وبعدها التاريخ
 function formatChatTime(iso: string, lang: string): string {
@@ -52,6 +59,10 @@ function FriendsPage() {
   const [cloudResults, setCloudResults] = useState<CloudUser[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [summaries, setSummaries] = useState<Record<string, FriendChatSummary>>({});
+  // جهات الاتصال: null = مو تطبيق أندرويد، false = ما سمح، true = سمح
+  const [contactsOk, setContactsOk] = useState<boolean | null>(null);
+  const [contactMatches, setContactMatches] = useState<ContactMatch[]>([]);
+  const [loadingContacts, setLoadingContacts] = useState(false);
   
   const {
     profile,
@@ -60,6 +71,7 @@ function FriendsPage() {
     relationOf,
     sendRequest,
     cancelRequest,
+    acceptRequest,
     removeFriend,
     blockUser,
     unblockUser,
@@ -87,6 +99,36 @@ function FriendsPage() {
 
     return () => clearTimeout(delayDebounce);
   }, [query, profile]);
+
+  // منو من جهات الاتصال عنده التطبيق (نعيد الفحص كل ما يرجع للصفحة، حتى لو فعّل الإذن هسه)
+  useEffect(() => {
+    if (!profile.id) return;
+    let active = true;
+    const check = async () => {
+      const ok = contactsAllowed();
+      if (!active) return;
+      setContactsOk(ok);
+      if (!ok) return;
+      setLoadingContacts(true);
+      try {
+        const found = await findContactsOnApp();
+        if (active) setContactMatches(found);
+      } catch (err) {
+        console.error("تعذر مطابقة جهات الاتصال:", err);
+      } finally {
+        if (active) setLoadingContacts(false);
+      }
+    };
+    void check();
+    const onVisible = () => {
+      if (document.visibilityState === "visible") void check();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      active = false;
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [profile.id]);
 
   // تحميل آخر رسالة لكل صديق + تحديث لحظي عند وصول أي رسالة جديدة
   useEffect(() => {
@@ -153,6 +195,12 @@ function FriendsPage() {
     [cloudResults, relationOf],
   );
 
+  // جهات الاتصال اللي عندهم التطبيق وبعدهم مو أصدقاء
+  const contactPeople = useMemo(
+    () => contactMatches.filter((c) => relationOf(c.id) !== "friend"),
+    [contactMatches, relationOf],
+  );
+
   const { startCall } = useCall();
   const handleAudioCall = (id: string, name: string) => {
     void startCall(id, name);
@@ -200,6 +248,76 @@ function FriendsPage() {
             </span>
           </span>
         </button>
+
+        {contactsOk === false && canOpenPhoneSetup() ? (
+          <button
+            type="button"
+            onClick={openPhoneSetup}
+            className="flex w-full items-center gap-3 rounded-2xl border-2 border-line bg-cream p-3 text-start transition-colors hover:bg-line/10 cursor-pointer"
+          >
+            <span className="text-xl">👥</span>
+            <span className="min-w-0 flex-1">
+              <span className="block font-display text-sm font-extrabold">اعرف منو من جهات اتصالك عنده التطبيق</span>
+              <span className="block text-[11.5px] text-muted-ink">اختياري — الأرقام بس للمطابقة وما تنحفظ</span>
+            </span>
+            <span className="text-muted-ink">←</span>
+          </button>
+        ) : null}
+
+        {contactsOk && !query.trim() && (contactPeople.length > 0 || loadingContacts) ? (
+          <section className="space-y-2">
+            <h2 className="font-mono text-[11px] tracking-widest text-muted-ink">
+              — 📱 من جهات اتصالك ({contactPeople.length}) —
+            </h2>
+            {loadingContacts && contactPeople.length === 0 ? (
+              <p className="text-sm text-muted-ink animate-pulse">ندوّر بجهات اتصالك…</p>
+            ) : (
+              contactPeople.map((c) => {
+                const person = {
+                  id: c.id,
+                  name: c.name,
+                  nameEn: c.name,
+                  handle: c.handle,
+                  role: "مستخدم حقيقي",
+                  roleEn: "Real User",
+                  status: c.status,
+                  lastSeenMinutes: 0,
+                  accent: "teal" as const,
+                };
+                const relation = relationOf(c.id);
+                return (
+                  <PersonRow
+                    key={c.id}
+                    person={person}
+                    note={c.contactName ? `📱 محفوظ عندك: ${c.contactName}` : undefined}
+                  >
+                    {relation === "none" ? (
+                      <RowButton tone="primary" onClick={() => handleSendCloudRequest(c.id, c.name)}>
+                        {t("sendRequest")}
+                      </RowButton>
+                    ) : null}
+                    {relation === "outgoing" ? (
+                      <RowButton onClick={() => cancelRequest(c.id)}>{t("pending")} ✕</RowButton>
+                    ) : null}
+                    {relation === "incoming" ? (
+                      <RowButton
+                        tone="primary"
+                        onClick={() =>
+                          acceptRequest(c.id).catch((error) => toast.error(friendlyDbError(error)))
+                        }
+                      >
+                        قبول الطلب
+                      </RowButton>
+                    ) : null}
+                    {relation === "blocked" ? (
+                      <RowButton onClick={() => unblockUser(c.id)}>{t("unblock")}</RowButton>
+                    ) : null}
+                  </PersonRow>
+                );
+              })
+            )}
+          </section>
+        ) : null}
 
         <div className="flex items-center gap-2 rounded-2xl border-2 border-line bg-cream px-3 py-2">
           <span>🔍</span>

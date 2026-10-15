@@ -12,8 +12,8 @@ export const Route = createFileRoute("/privacy")({
   component: PrivacyPage,
 });
 
-const UPDATED = "14 أكتوبر 2026";
-const UPDATED_EN = "October 14, 2026";
+const UPDATED = "15 أكتوبر 2026";
+const UPDATED_EN = "October 15, 2026";
 const CONTACT = "abnalramady@gmail.com";
 
 function Section({ title, children, id }: { title: string; children: ReactNode; id?: string }) {
@@ -79,6 +79,20 @@ function PrivacyPage() {
               <b>ما نسجّل المكالمات ولا نحفظ الصوت أو الصورة</b> على أي سيرفر. نستخدم المايكروفون والكاميرا
               بس أثناء المكالمة اللي إنت تبدأها أو ترد عليها.
             </p>
+          </Section>
+
+          <Section title="جهات الاتصال (اختياري)" id="contacts">
+            <p>
+              تطبيق الأندرويد يطلب إذن <b>جهات الاتصال</b> بس إذا إنت وافقت، وتكدر ترفض والتطبيق يبقى يشتغل عادي.
+              نستخدمه لهدف واحد: نعرف <b>منو من الأرقام المحفوظة بتلفونك عنده حساب بالتطبيق</b> حتى نطلّعهم لك
+              وتضيفهم بسهولة.
+            </p>
+            <ul className="list-disc space-y-1 ps-5">
+              <li>نرسل أرقام جهات الاتصال للسيرفر بشكل مشفّر (HTTPS) <b>للمطابقة بس</b>، و<b>ما نحفظها</b>.</li>
+              <li>أسماء جهات الاتصال <b>ما تطلع من تلفونك</b> أبداً، تنعرض عندك بس.</li>
+              <li>ما نرسل أي رسالة أو دعوة لجهات اتصالك، وما نشاركها ويا أي أحد.</li>
+              <li>تكدر تسحب الإذن بأي وقت من: إعدادات التلفون ← التطبيقات ← الغباء الصناعي ← الأذونات.</li>
+            </ul>
           </Section>
 
           <Section title="3. ليش نستخدم هذي المعلومات">
@@ -175,6 +189,13 @@ function PrivacyPage() {
             <p>
               <b>Calls:</b> voice and video calls are peer-to-peer (WebRTC). We do not record calls or store any
               audio or video. The microphone and camera are used only during a call you start or answer.
+            </p>
+            <p>
+              <b>Contacts (optional):</b> the Android app asks for contacts access only if you agree, and works
+              normally if you decline. If you allow it, the phone numbers in your contacts are sent over HTTPS
+              solely to check which of them have an account in the app, so we can show them to you. The numbers are
+              <b> not stored</b>, contact names never leave your phone, and we never message or share your contacts.
+              You can revoke the permission at any time in your phone's app settings.
             </p>
             <p>
               <b>How we use data:</b> to provide the app (sign-in, friends, messaging, calls), to notify you of

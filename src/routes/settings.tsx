@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { PageBody } from "@/components/app/AppShell";
@@ -6,6 +6,7 @@ import { useI18n, type Lang } from "@/lib/i18n";
 import { useTheme, type Theme } from "@/lib/theme";
 import { useChatStore } from "@/lib/chat-store";
 import { useFriends } from "@/lib/friends-store";
+import { canOpenPhoneSetup, openPhoneSetup } from "@/lib/phone-setup";
 
 export const Route = createFileRoute("/settings")({
   head: () => ({
@@ -27,6 +28,9 @@ function SettingsPage() {
   const { theme, setTheme } = useTheme();
   const { clearAll } = useChatStore();
   const { resetAll } = useFriends();
+  // زر "تجهيز التلفون" يظهر بس داخل تطبيق الأندرويد
+  const [hasPhoneSetup, setHasPhoneSetup] = useState(false);
+  useEffect(() => setHasPhoneSetup(canOpenPhoneSetup()), []);
 
   // حالات برمجية مضافة حديثاً لإدارة خيارات الصوت والمؤثرات
   const [soundEnabled, setSoundEnabled] = useState(true);
@@ -62,6 +66,23 @@ function SettingsPage() {
     <PageBody title={t("settingsTitle")} subtitle={t("settingsSubtitle")}>
       <div className="mx-auto w-full max-w-2xl space-y-4 pb-10">
         
+        {hasPhoneSetup ? (
+          <button
+            type="button"
+            onClick={openPhoneSetup}
+            className="flex w-full items-center gap-3 rounded-3xl border-2 border-line bg-cream p-5 text-start cursor-pointer transition-colors hover:bg-line/10"
+          >
+            <span className="text-2xl">📲</span>
+            <span className="min-w-0 flex-1">
+              <span className="block font-display text-lg font-bold">تجهيز التلفون</span>
+              <span className="block text-sm text-muted-ink">
+                الإشعارات، البطارية، التشغيل التلقائي، وجهات الاتصال — حتى توصلك المكالمات والتطبيق مسكّر
+              </span>
+            </span>
+            <span className="text-muted-ink">←</span>
+          </button>
+        ) : null}
+
         {/* 1. قسم اللغة */}
         <section className="rounded-3xl border-2 border-line bg-cream p-5">
           <h2 className="font-display text-lg font-bold">{t("language")}</h2>
