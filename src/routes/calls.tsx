@@ -1,9 +1,20 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
 import { createFileRoute } from "@tanstack/react-router";
 import { PageBody } from "@/components/app/AppShell";
 import { useFriends } from "@/lib/friends-store";
 import { useCall } from "@/lib/call-store";
-import { getCallLogs, type CallLog } from "@/lib/call-logs";
+import { clearCallLogs, getCallLogs, hideCallLogs, type CallLog } from "@/lib/call-logs";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export const Route = createFileRoute("/calls")({
   head: () => ({
@@ -59,10 +70,15 @@ function CallsPage() {
   const [logs, setLogs] = useState<CallLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // التأكيد قبل المسح: "all" = كل السجل، أو مكالمة وحدة
+  const [confirm, setConfirm] = useState<"all" | CallLog | null>(null);
+  const [busy, setBusy] = useState(false);
+  const pressTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   const load = useCallback(async () => {
+    if (!profile.id) return;
     try {
-      setLogs(await getCallLogs());
+      setLogs(await getCallLogs(profile.id));
       setError(null);
     } catch (err) {
       console.error(err);
@@ -70,16 +86,67 @@ function CallsPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [profile.id]);
 
   // نحدّث السجل كل ما تخلص مكالمة
   useEffect(() => {
     if (phase === "idle") void load();
   }, [phase, load]);
 
+  // ضغط مطوّل على المكالمة = حذفها
+  const startPress = (log: CallLog) => {
+    clearTimeout(pressTimer.current);
+    pressTimer.current = setTimeout(() => {
+      navigator.vibrate?.(30);
+      setConfirm(log);
+    }, 550);
+  };
+  const cancelPress = () => clearTimeout(pressTimer.current);
+  useEffect(() => () => clearTimeout(pressTimer.current), []);
+
+  const doDelete = async () => {
+    const target = confirm;
+    if (!target) return;
+    setBusy(true);
+    const before = logs;
+    // نشيلها من الشاشة فوراً، وإذا فشل نرجّعها
+    setLogs(target === "all" ? [] : logs.filter((l) => l.id !== target.id));
+    setConfirm(null);
+    try {
+      if (target === "all") await clearCallLogs();
+      else await hideCallLogs([target.id]);
+      toast.success(target === "all" ? "انمسح السجل" : "انحذفت المكالمة");
+    } catch (err) {
+      console.error(err);
+      setLogs(before);
+      const msg = err instanceof Error ? err.message : "";
+      toast.error(
+        /hide_call_logs|clear_call_logs|function/.test(msg)
+          ? "المسح بعده ما مفعّل: لازم يتشغّل ملف call-logs-hide.sql بـ Supabase"
+          : "تعذر المسح، حاول مرة ثانية",
+        { duration: 8000 },
+      );
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
     <PageBody title="سجل المكالمات" subtitle="مكالماتك الصادرة والواردة والفائتة">
       <div className="mx-auto w-full max-w-3xl space-y-2">
+        {logs.length > 0 ? (
+          <div className="flex items-center justify-between gap-2 pb-1">
+            <p className="text-[11px] text-muted-ink">اضغط مطوّلاً على مكالمة حتى تحذفها</p>
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => setConfirm("all")}
+              className="shrink-0 rounded-full border-2 border-line bg-cream px-3 py-1 text-[12px] font-semibold text-red-600 hover:bg-line/20 disabled:opacity-50"
+            >
+              🗑️ مسح السجل
+            </button>
+          </div>
+        ) : null}
         {loading ? <p className="py-6 text-center text-sm text-muted-ink">لحظة…</p> : null}
         {error ? <p className="py-6 text-center text-sm text-coral">{error}</p> : null}
         {!loading && !error && logs.length === 0 ? (
@@ -97,7 +164,20 @@ function CallsPage() {
           return (
             <div
               key={log.id}
-              className="flex items-center gap-3 rounded-2xl border-2 border-line/60 bg-cream/30 p-3"
+              onPointerDown={(e) => {
+                // الضغط على أزرار الاتصال ما يحسب
+                if ((e.target as HTMLElement).closest("button")) return;
+                startPress(log);
+              }}
+              onPointerUp={cancelPress}
+              onPointerLeave={cancelPress}
+              onPointerCancel={cancelPress}
+              onContextMenu={(e) => {
+                e.preventDefault();
+                cancelPress();
+                setConfirm(log);
+              }}
+              className="flex select-none items-center gap-3 rounded-2xl border-2 border-line/60 bg-cream/30 p-3 [-webkit-touch-callout:none]"
             >
               <div className="grid size-11 shrink-0 place-items-center rounded-full bg-teal/20 font-display font-bold">
                 {name.charAt(0)}
@@ -138,6 +218,25 @@ function CallsPage() {
           );
         })}
       </div>
+
+      <AlertDialog open={confirm !== null} onOpenChange={(open) => !open && setConfirm(null)}>
+        <AlertDialogContent dir="rtl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>{confirm === "all" ? "مسح كل السجل؟" : "حذف هذه المكالمة؟"}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {confirm === "all"
+                ? "تنمسح كل المكالمات من سجلك أنت فقط، وتبقى بسجل أصدقائك."
+                : "تنحذف من سجلك أنت فقط، وتبقى بسجل صديقك."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="gap-2">
+            <AlertDialogCancel>لا</AlertDialogCancel>
+            <AlertDialogAction onClick={() => void doDelete()} className="bg-red-600 text-white hover:bg-red-700">
+              {confirm === "all" ? "امسح الكل" : "احذف"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </PageBody>
   );
 }

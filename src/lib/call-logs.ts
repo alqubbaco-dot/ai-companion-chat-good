@@ -36,12 +36,42 @@ export async function saveCallLog(entry: {
   if (error) console.warn("تعذر حفظ سجل المكالمة:", error.message);
 }
 
-export async function getCallLogs(limit = 100): Promise<CallLog[]> {
+const LOG_FIELDS = "id,call_id,caller_id,callee_id,video,status,duration_seconds,started_at";
+
+// سجلي أنا: نخفي المكالمات اللي مسحتها (المسح بـ supabase/call-logs-hide.sql)
+export async function getCallLogs(myId: string, limit = 100): Promise<CallLog[]> {
   const { data, error } = await supabase
     .from("call_logs")
-    .select("id,call_id,caller_id,callee_id,video,status,duration_seconds,started_at")
+    .select(LOG_FIELDS)
+    .or(
+      `and(caller_id.eq.${myId},hidden_for_caller.eq.false),and(callee_id.eq.${myId},hidden_for_callee.eq.false)`,
+    )
     .order("started_at", { ascending: false })
     .limit(limit);
+  if (!error) return (data || []) as CallLog[];
+
+  // ملف المسح بعده ما انشغّل بـ Supabase: نعرض السجل بالطريقة القديمة
+  if (/hidden_for_/.test(error.message)) {
+    const old = await supabase
+      .from("call_logs")
+      .select(LOG_FIELDS)
+      .order("started_at", { ascending: false })
+      .limit(limit);
+    if (old.error) throw old.error;
+    return (old.data || []) as CallLog[];
+  }
+  throw error;
+}
+
+// يمسح مكالمات معيّنة من سجلي فقط (تبقى بسجل صديقي)
+export async function hideCallLogs(ids: string[]): Promise<void> {
+  if (ids.length === 0) return;
+  const { error } = await supabase.rpc("hide_call_logs", { p_ids: ids });
   if (error) throw error;
-  return (data || []) as CallLog[];
+}
+
+// يمسح كل سجلي
+export async function clearCallLogs(): Promise<void> {
+  const { error } = await supabase.rpc("clear_call_logs");
+  if (error) throw error;
 }
