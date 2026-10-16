@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { useRef, useState } from "react";
-import type { Person } from "@/lib/friends-store";
+import { useFriends, type Person } from "@/lib/friends-store";
 import { useI18n } from "@/lib/i18n";
 import { useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
@@ -42,7 +42,8 @@ export function PersonRow({
   
   const name = lang === "ar" ? person.name : person.nameEn;
   const role = lang === "ar" ? person.role : person.roleEn;
-  const isOnline = person.status === "online";
+  const { isOnline: isOnlineNow } = useFriends();
+  const isOnline = isOnlineNow(person.id);
 
   // دالة الضغط الذكية لفتح شاشة المراسلة فوراً بالاسم والصورة مثل الواتساب
   const handleCardClick = async () => {
@@ -113,7 +114,7 @@ export function PersonRow({
           <div className={`grid size-12 place-items-center rounded-full font-display text-lg font-bold ${accentBg[person.accent]}`}>
             {name.charAt(0)}
           </div>
-          <span className={`absolute -bottom-0.5 -start-0.5 size-3.5 rounded-full ring-2 ring-cream ${isOnline ? "bg-emerald-500" : "bg-ink/25"}`} />
+          <span className={`absolute -bottom-0.5 -start-0.5 size-3.5 rounded-full ring-2 ring-cream ${isOnline ? "bg-emerald-500" : "bg-red-300"}`} title={isOnline ? "متصل الآن" : "غير متصل"} />
         </div>
 
         <div className="min-w-0 flex-1">
