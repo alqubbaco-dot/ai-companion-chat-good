@@ -13,6 +13,7 @@ import type { RealtimeChannel } from "@supabase/supabase-js";
 import { toast } from "sonner";
 import { supabase } from "./supabase";
 import { useFriends } from "./friends-store";
+import { getRingtone, ringtoneUrl } from "./ringtones";
 import { notifyFriend } from "./push-client";
 import { saveCallLog, type CallStatus } from "./call-logs";
 import { getTurnIceServers } from "./turn-server";
@@ -185,7 +186,7 @@ function newCallId() {
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
-// رنين بسيط مصنوع بالكود (بدون ملفات صوت)
+// الرنين: الوارد بنغمة القبة المختارة، والصادر صفير بسيط مصنوع بالكود
 function createRinger(kind: "incoming" | "outgoing") {
   let ctx: AudioContext | null = null;
   let timer: ReturnType<typeof setInterval> | undefined;
@@ -215,8 +216,44 @@ function createRinger(kind: "incoming" | "outgoing") {
     }
   };
 
+  // الرنين الوارد: نشغّل نغمة القبة المختارة، وإذا ما اشتغلت نرجع للصفير
+  let tone: HTMLAudioElement | null = null;
+  let stopped = false;
+
   return {
     start() {
+      stopped = false;
+      if (kind === "incoming") {
+        try {
+          tone = new Audio(ringtoneUrl(getRingtone()));
+          tone.loop = true;
+          void tone.play().catch(() => {
+            tone = null;
+            if (!stopped) startBeeps();
+          });
+          try {
+            navigator.vibrate?.([400, 200, 400, 200, 400]);
+          } catch {
+            /* */
+          }
+          return;
+        } catch {
+          tone = null;
+        }
+      }
+      startBeeps();
+    },
+    stop() {
+      stopped = true;
+      if (tone) {
+        tone.pause();
+        tone = null;
+      }
+      stopBeeps();
+    },
+  };
+
+  function startBeeps() {
       try {
         const Ctor = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
         ctx = new Ctor();
@@ -226,8 +263,9 @@ function createRinger(kind: "incoming" | "outgoing") {
       } catch {
         /* الصوت غير متاح */
       }
-    },
-    stop() {
+  }
+
+  function stopBeeps() {
       clearInterval(timer);
       timer = undefined;
       try {
@@ -237,8 +275,7 @@ function createRinger(kind: "incoming" | "outgoing") {
       }
       void ctx?.close().catch(() => undefined);
       ctx = null;
-    },
-  };
+  }
 }
 
 export function CallProvider({ children }: { children: ReactNode }) {
