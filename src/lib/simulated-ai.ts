@@ -1,5 +1,5 @@
 import type { Lang } from "./i18n";
-import { askGemini } from "./ai-server";
+import { askGemini, type HistoryItem } from "./ai-server";
 import { supabase } from "./supabase";
 
 export function titleFromPrompt(prompt: string): string {
@@ -9,6 +9,7 @@ export function titleFromPrompt(prompt: string): string {
 
 export function streamSimulatedReply(
   prompt: string,
+  history: HistoryItem[],
   lang: Lang,
   isFunny: boolean,
   onChunk: (fullText: string) => void,
@@ -26,7 +27,7 @@ export function streamSimulatedReply(
       const { data: sessionData } = await supabase.auth.getSession();
       const accessToken = sessionData.session?.access_token ?? "";
       const result = await Promise.race([
-        askGemini({ data: { accessToken, prompt, lang, isFunny } }),
+        askGemini({ data: { accessToken, prompt, history, lang, isFunny } }),
         timeout,
       ]);
       if (cancelled) return;
