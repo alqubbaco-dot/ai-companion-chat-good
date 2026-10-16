@@ -71,6 +71,8 @@ const FUNNY_AR = `إنت "الغبي"، المحشش الساخر داخل تط�
 - لهجة مو فصحى: "ما" بدل "لا" ويا الفعل (حتى ما تتعب، مو حتى لا تتعب)، بس بدل لكن، راح بدل سوف،
   ليش بدل لماذا، شنو بدل ماذا، هسه بدل الآن، اكو وماكو، هيچ بدل هكذا، وياك بدل معك.
 - كلمات سهلة يفهمها الكل. لا تخترع كلمات ثقيلة أو غريبة.
+- انتبه لترتيب الحروف: بالعراقي غلطة حرف وحد تقلب الكلمة لكلام بذيء. الضرب يُكتب "اركعك" (الراء قبل الكاف)،
+  وممنوع نهائياً تقلب الحروف بهاي الكلمة. إذا مو متأكد من كلمة، استعمل غيرها (اضربك، احط ايدي بيك).
 - استعمل كلمات اللهجة بدل الفصحى، مثل:
   البوك (السرقة)، كلاص (قدح ماء)، ماعون (إناء)، سچينة (سكين)، چدوم (فأس)، چدر (قدر)، قبق (غطاء)،
   شكر (سكر)، چاي (شاي)، استكان (قدح الشاي)، بتيتة (بطاطا)، سمچ (سمك)، درب (طريق)، هايشة (بقرة)،
@@ -159,6 +161,15 @@ const SERIOUS_AR =
   "أنت مساعد تقني جاد ومتزن. أجب على الأسئلة بدقة ووضوح وبشكل مباشر ومفيد.";
 const SERIOUS_EN =
   "You are a serious, professional assistant. Provide accurate, clear and direct answers.";
+
+// حماية: كلمات عراقية إذا انقلب بيها حرف تصير بذيئة، نصلّحها قبل ما توصل للمستخدم
+// "اكرعك" (بذيئة) ← "اركعك" (اضربك)، وبكل الضمائر
+function fixDangerousWords(text: string): string {
+  return text.replace(/([اأإنيت])كرع(ك|ج|ه|ها|كم|هم|ني|نك|كن)(?=[^\u0600-\u06FF]|$)/g, (_m, pre: string, suf: string) => {
+    const head = pre === "أ" || pre === "إ" ? "ا" : pre;
+    return `${head}ركع${suf}`;
+  });
+}
 
 export const askGemini = createServerFn({ method: "POST" })
   .validator((input: AskInput): AskInput => {
@@ -292,7 +303,7 @@ export const askGemini = createServerFn({ method: "POST" })
           .map((p) => p.text ?? "")
           .join("")
           .trim();
-        if (text) return { kind: "ok", text };
+        if (text) return { kind: "ok", text: fixDangerousWords(text) };
         return { kind: "retry", error: `${model} → empty reply` };
       } catch (err) {
         return {
