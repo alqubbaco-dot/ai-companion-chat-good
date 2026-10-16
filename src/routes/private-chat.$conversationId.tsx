@@ -94,7 +94,7 @@ function CallMenu({ onVoice, onVideo }: { onVoice: () => void; onVideo: () => vo
 
 function PrivateChatPage() {
   const { conversationId } = Route.useParams();
-  const { directory, profile } = useFriends();
+  const { directory, profile, isOnline: isOnlineNow } = useFriends();
   const { startCall } = useCall();
   const [messages, setMessages] = useState<PrivateMessage[]>([]);
   const [otherUserId, setOtherUserId] = useState("");
@@ -243,7 +243,7 @@ function PrivateChatPage() {
     }
   };
 
-  const isOnline = otherUser?.status === "online";
+  const isOnline = otherUserId ? isOnlineNow(otherUserId) : false;
   const formatTime = (iso: string) =>
     new Intl.DateTimeFormat("ar-IQ", { hour: "numeric", minute: "2-digit" }).format(new Date(iso));
 
@@ -263,14 +263,16 @@ function PrivateChatPage() {
           <div className="grid size-10 place-items-center rounded-full bg-teal/20 font-display font-bold">
             {title.charAt(0)}
           </div>
-          {isOnline ? (
-            <span className="absolute -bottom-0.5 -start-0.5 size-3 rounded-full bg-emerald-500 ring-2 ring-cream" />
+          {otherUserId ? (
+            <span
+              className={`absolute -bottom-0.5 -start-0.5 size-3 rounded-full ring-2 ring-cream ${isOnline ? "bg-emerald-500" : "bg-red-300"}`}
+            />
           ) : null}
         </div>
         <div className="min-w-0 flex-1">
           <p className="truncate font-display text-[15px] font-extrabold leading-tight">{title}</p>
           <p className={`truncate text-[11px] ${isOnline ? "text-emerald-600" : "text-muted-ink"}`}>
-            {isOnline ? "متصل الآن" : otherUser?.handle || ""}
+            {isOnline ? "متصل الآن" : "غير متصل"}
           </p>
         </div>
         {otherUserId ? (

@@ -93,6 +93,8 @@ type FriendsValue = {
   updateProfile: (profile: Profile) => void;
   resetAll: () => void;
   refreshProfile: () => Promise<void>;
+  /** متصل فعلاً الآن (التطبيق مفتوح قدامه) — من Supabase Presence */
+  isOnline: (id: string) => boolean;
 };
 
 const FriendsContext = createContext<FriendsValue | null>(null);
@@ -109,6 +111,53 @@ export function FriendsProvider({ children }: { children: ReactNode }) {
   const [relations, setRelations] = useState<Relations>(DEFAULT_RELATIONS);
   const [profile, setProfile] = useState<Profile>(DEFAULT_PROFILE);
   const [hydrated, setHydrated] = useState(false);
+  const [onlineIds, setOnlineIds] = useState<Set<string>>(() => new Set());
+
+  // الحالة الحقيقية: كل جهاز التطبيق مفتوح بيه يعلن وجوده بقناة وحدة (Presence).
+  // إذا انقفل التطبيق أو راح للخلفية أو انقطع النت، يختفي خلال ثواني.
+  useEffect(() => {
+    const myId = profile.id;
+    if (!myId) {
+      setOnlineIds(new Set());
+      return;
+    }
+    const channel = supabase.channel("presence:online", {
+      config: { presence: { key: myId } },
+    });
+    let subscribed = false;
+
+    const sync = () => setOnlineIds(new Set(Object.keys(channel.presenceState())));
+    const announce = () => {
+      if (!subscribed) return;
+      if (document.visibilityState === "visible") {
+        void channel.track({ at: Date.now() });
+      } else {
+        void channel.untrack();
+      }
+    };
+
+    channel
+      .on("presence", { event: "sync" }, sync)
+      .on("presence", { event: "join" }, sync)
+      .on("presence", { event: "leave" }, sync)
+      .subscribe((status) => {
+        if (status === "SUBSCRIBED") {
+          subscribed = true;
+          announce();
+        }
+      });
+
+    document.addEventListener("visibilitychange", announce);
+    window.addEventListener("pagehide", announce);
+    return () => {
+      document.removeEventListener("visibilitychange", announce);
+      window.removeEventListener("pagehide", announce);
+      void channel.untrack();
+      void supabase.removeChannel(channel);
+    };
+  }, [profile.id]);
+
+  const isOnline = useCallback((id: string) => onlineIds.has(id), [onlineIds]);
 
   const refreshRelations = useCallback(async (userId: string) => {
     // علاقاتي من قاعدة البيانات عن طريق دالة آمنة (my_relations)
@@ -375,9 +424,10 @@ export function FriendsProvider({ children }: { children: ReactNode }) {
         setProfile(DEFAULT_PROFILE);
         if (profile.id) writeStored(profileKey(profile.id), DEFAULT_PROFILE);
       },
-      refreshProfile
+      refreshProfile,
+      isOnline,
     };
-  }, [hydrated, directory, profile, relations, byIds, relationOf, sendRequest, cancelRequest, acceptRequest, rejectRequest, removeFriend, blockUser, unblockUser, refreshProfile]);
+  }, [hydrated, directory, profile, relations, byIds, relationOf, sendRequest, cancelRequest, acceptRequest, rejectRequest, removeFriend, blockUser, unblockUser, refreshProfile, isOnline]);
 
   return <FriendsContext.Provider value={value}>{children}</FriendsContext.Provider>;
 }
