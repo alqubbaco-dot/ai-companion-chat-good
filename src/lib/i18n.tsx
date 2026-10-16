@@ -101,7 +101,7 @@ const dict = {
     deleteChatConfirm: "هل تريد حذف هذه المحادثة؟",
   },
   en: {
-    appName: "Qubba Chat",
+    appName: "Qubba",
     appTagline: "A human-stupidity factory, run by artificial intelligence.",
     navNewChat: "New chat",
     navChats: "My chats",
