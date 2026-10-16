@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { ChevronDown, Phone, Video } from "lucide-react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useFriends } from "@/lib/friends-store";
 import { useCall } from "@/lib/call-store";
@@ -21,6 +22,75 @@ import { supabase } from "@/lib/supabase";
 export const Route = createFileRoute("/private-chat/$conversationId")({
   component: PrivateChatPage,
 });
+
+// زر اتصال واحد مثل الواتساب: يفتح قائمة (مكالمة صوتية / مكالمة فيديو)
+function CallMenu({ onVoice, onVideo }: { onVoice: () => void; onVideo: () => void }) {
+  const [open, setOpen] = useState(false);
+  const boxRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const close = (e: PointerEvent) => {
+      if (boxRef.current && !boxRef.current.contains(e.target as Node)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("pointerdown", close);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("pointerdown", close);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
+  const pick = (action: () => void) => {
+    setOpen(false);
+    action();
+  };
+
+  return (
+    <div ref={boxRef} className="relative shrink-0">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex h-10 items-center gap-0.5 rounded-full border-2 border-line bg-cream px-3 text-ink transition-transform active:scale-95"
+        title="اتصال"
+        aria-label="اتصال"
+        aria-haspopup="menu"
+        aria-expanded={open}
+      >
+        <Phone className="size-[22px]" strokeWidth={1.8} />
+        <ChevronDown className={`size-4 transition-transform ${open ? "rotate-180" : ""}`} strokeWidth={2} />
+      </button>
+      {open ? (
+        <div
+          role="menu"
+          className="absolute end-0 top-full z-50 mt-2 w-52 overflow-hidden rounded-2xl border-2 border-line bg-cream py-1.5 shadow-lg"
+        >
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => pick(onVoice)}
+            className="flex w-full items-center gap-3 px-4 py-3 text-start font-display text-[15px] font-bold hover:bg-ink/5 active:bg-ink/10"
+          >
+            <Phone className="size-5 shrink-0 text-emerald-600" strokeWidth={1.8} />
+            مكالمة صوتية
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => pick(onVideo)}
+            className="flex w-full items-center gap-3 px-4 py-3 text-start font-display text-[15px] font-bold hover:bg-ink/5 active:bg-ink/10"
+          >
+            <Video className="size-5 shrink-0 text-emerald-600" strokeWidth={1.8} />
+            مكالمة فيديو
+          </button>
+        </div>
+      ) : null}
+    </div>
+  );
+}
 
 function PrivateChatPage() {
   const { conversationId } = Route.useParams();
@@ -204,26 +274,10 @@ function PrivateChatPage() {
           </p>
         </div>
         {otherUserId ? (
-          <button
-            type="button"
-            onClick={() => void startCall(otherUserId, title, true)}
-            className="grid size-10 shrink-0 place-items-center rounded-full border-2 border-line bg-cream text-lg shadow-sm transition-transform active:scale-95"
-            title="مكالمة فيديو"
-            aria-label="مكالمة فيديو"
-          >
-            📹
-          </button>
-        ) : null}
-        {otherUserId ? (
-          <button
-            type="button"
-            onClick={() => void startCall(otherUserId, title)}
-            className="grid size-10 shrink-0 place-items-center rounded-full bg-emerald-500 text-lg text-white shadow-sm transition-transform active:scale-95"
-            title="اتصال صوتي"
-            aria-label="اتصال صوتي"
-          >
-            📞
-          </button>
+          <CallMenu
+            onVoice={() => void startCall(otherUserId, title)}
+            onVideo={() => void startCall(otherUserId, title, true)}
+          />
         ) : null}
       </header>
 
