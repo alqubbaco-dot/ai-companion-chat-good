@@ -20,6 +20,8 @@ import {
 } from "@/lib/private-chat";
 import { supabase } from "@/lib/supabase";
 import { PersonPhoto } from "@/components/app/Avatar";
+import { STICKERS, STICKERS_FEATURE, StickerArt, stickerContent, stickerFromContent, type Sticker } from "@/components/chat/Stickers";
+import { getMyPoints } from "@/lib/ad-points";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 
 export const Route = createFileRoute("/private-chat/$conversationId")({
@@ -343,6 +345,12 @@ function PrivateChatPage() {
   const { startCall } = useCall();
   const navigate = useNavigate();
   const [dialog, setDialog] = useState<null | "report" | "block">(null);
+  const [stickersOpen, setStickersOpen] = useState(false);
+  const [stickersUnlocked, setStickersUnlocked] = useState(false);
+
+  useEffect(() => {
+    void getMyPoints().then((p) => setStickersUnlocked(Boolean(p?.unlocked?.includes(STICKERS_FEATURE))));
+  }, []);
   const [messages, setMessages] = useState<PrivateMessage[]>([]);
   const [otherUserId, setOtherUserId] = useState("");
   const [draft, setDraft] = useState("");
@@ -494,6 +502,24 @@ function PrivateChatPage() {
 
   const addMessage = (message: PrivateMessage) =>
     setMessages((current) => current.some((item) => item.id === message.id) ? current : [...current, message]);
+
+  // ملصق: 4 ببلاش، والباقي يحتاج ميزة الملصقات (100 نقطة)
+  const sendSticker = async (sticker: Sticker) => {
+    if (!sticker.free && !stickersUnlocked) {
+      toast("🔒 هذا الملصق ينفتح بـ 100 نقطة من صفحة النقاط");
+      navigate({ to: "/points" });
+      return;
+    }
+    setStickersOpen(false);
+    try {
+      const message = await sendPrivateMessage(conversationId, stickerContent(sticker));
+      addMessage(message);
+      notifyOther(message);
+    } catch (err) {
+      console.error("تعذر إرسال الملصق:", err);
+      toast.error("ما انرسل الملصق، تأكد من النت وجرّب مرة ثانية");
+    }
+  };
 
   const mediaError = (err: unknown) => {
     console.error("تعذر إرسال الوسائط:", err);
@@ -692,6 +718,24 @@ function PrivateChatPage() {
         ) : null}
         {messages.map((message) => {
           const mine = message.sender_id === profile.id;
+          const sticker = message.kind === "image" || message.kind === "audio" ? null : stickerFromContent(message.content);
+          if (sticker) {
+            return (
+              <div key={message.id} className={`flex ${mine ? "justify-start" : "justify-end"}`}>
+                <div className="flex flex-col items-center">
+                  <StickerArt sticker={sticker} size={110} />
+                  <p className="mt-0.5 text-[10px]">
+                    <span className="opacity-60">{formatTime(message.created_at)}</span>
+                    {mine ? (
+                      <span className={`ms-1 font-bold ${message.read_at ? "text-sky-500" : "opacity-60"}`}>
+                        {message.read_at ? "✓✓" : "✓"}
+                      </span>
+                    ) : null}
+                  </p>
+                </div>
+              </div>
+            );
+          }
           return (
             <div key={message.id} className={`flex ${mine ? "justify-start" : "justify-end"}`}>
               <div
@@ -732,6 +776,33 @@ function PrivateChatPage() {
         <p className="px-3 py-1 text-center text-[12px] text-muted-ink">
           {uploading === "image" ? "📷 دا نرسل الصورة…" : "🎤 دا نرسل الرسالة الصوتية…"}
         </p>
+      ) : null}
+
+      {/* لوحة الملصقات */}
+      {stickersOpen && !isBlocked ? (
+        <div className="shrink-0 border-t-2 border-line bg-paper px-3 py-3">
+          <div className="mb-2 flex items-center justify-between text-[12px] font-bold text-muted-ink">
+            <span>ملصقات عراقية</span>
+            {!stickersUnlocked ? <span>🔒 الباقي بـ 100 نقطة</span> : null}
+          </div>
+          <div className="grid max-h-64 grid-cols-4 gap-2 overflow-y-auto">
+            {STICKERS.map((s) => {
+              const locked = !s.free && !stickersUnlocked;
+              return (
+                <button
+                  key={s.id}
+                  type="button"
+                  onClick={() => void sendSticker(s)}
+                  className={`relative grid place-items-center rounded-2xl p-1 transition-transform active:scale-95 ${locked ? "opacity-50" : ""}`}
+                  aria-label={locked ? `${s.label} (مقفول)` : `إرسال ${s.label}`}
+                >
+                  <StickerArt sticker={s} size={64} />
+                  {locked ? <span className="absolute end-1 top-1 text-sm">🔒</span> : null}
+                </button>
+              );
+            })}
+          </div>
+        </div>
       ) : null}
 
       {/* مربع الكتابة */}
@@ -776,6 +847,17 @@ function PrivateChatPage() {
           </div>
         ) : (
           <>
+            <button
+              type="button"
+              onClick={() => setStickersOpen((v) => !v)}
+              disabled={loading || isBlocked}
+              className={`grid size-11 shrink-0 place-items-center rounded-full text-xl hover:bg-ink/5 disabled:opacity-40 ${stickersOpen ? "bg-ink/10" : "text-muted-ink"}`}
+              aria-label="ملصقات"
+              title="ملصقات"
+              aria-expanded={stickersOpen}
+            >
+              😀
+            </button>
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
