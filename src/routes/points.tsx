@@ -33,7 +33,7 @@ const FEATURE_EMOJI: Record<string, string> = {
 };
 
 // الميزات الجاهزة فعلاً بالتطبيق. الباقي يطلع "قريباً" وما ينشرى لحد ما نبنيه
-const READY_FEATURES = new Set(["themes"]);
+const READY_FEATURES = new Set(["themes", "funny_characters"]);
 
 const AD_ERRORS: Record<string, string> = {
   login_required: "سجّل دخولك أول حتى تنحسب النقاط باسمك",

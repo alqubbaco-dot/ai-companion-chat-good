@@ -12,6 +12,7 @@ export function streamSimulatedReply(
   history: HistoryItem[],
   lang: Lang,
   isFunny: boolean,
+  character: string | undefined,
   onChunk: (fullText: string) => void,
   onDone: (fullText: string) => void,
 ): () => void {
@@ -27,7 +28,7 @@ export function streamSimulatedReply(
       const { data: sessionData } = await supabase.auth.getSession();
       const accessToken = sessionData.session?.access_token ?? "";
       const result = await Promise.race([
-        askGemini({ data: { accessToken, prompt, history, lang, isFunny } }),
+        askGemini({ data: { accessToken, prompt, history, lang, isFunny, character } }),
         timeout,
       ]);
       if (cancelled) return;
