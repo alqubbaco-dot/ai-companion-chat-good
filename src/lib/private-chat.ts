@@ -19,6 +19,8 @@ export type PrivateMessage = {
   kind?: MessageKind;
   media_path?: string | null;
   media_duration?: number | null;
+  /** وقت قراءة الطرف الثاني للرسالة (بعد تشغيل last-seen-and-read.sql) */
+  read_at?: string | null;
 };
 
 export const MEDIA_LABEL: Record<Exclude<MessageKind, "text">, string> = {
@@ -84,6 +86,7 @@ export async function sendPrivateMessage(
 export function subscribeToPrivateMessages(
   conversationId: string,
   onMessage: (message: PrivateMessage) => void,
+  onUpdate?: (message: PrivateMessage) => void,
 ) {
   const channel = supabase
     .channel(`private-messages:${conversationId}`)
@@ -97,6 +100,16 @@ export function subscribeToPrivateMessages(
       },
       (payload) => onMessage(payload.new as PrivateMessage),
     )
+    .on(
+      "postgres_changes",
+      {
+        event: "UPDATE",
+        schema: "public",
+        table: "private_messages",
+        filter: `conversation_id=eq.${conversationId}`,
+      },
+      (payload) => onUpdate?.(payload.new as PrivateMessage),
+    )
     .subscribe();
 
   return () => {
@@ -104,6 +117,12 @@ export function subscribeToPrivateMessages(
   };
 }
 // ───────────── ترتيب الأصدقاء مثل الواتساب ─────────────
+
+/** نبلّغ المرسل إن رسائله انقرت (علامة ✓✓ الزرقاء). يتجاهل الخطأ إذا ملف SQL بعده ما انشغّل */
+export async function markConversationReadRemote(conversationId: string): Promise<void> {
+  const { error } = await supabase.rpc("mark_conversation_read", { p_conversation: conversationId });
+  if (error) console.warn("علامات القراءة غير مفعّلة بعد:", error.message);
+}
 
 export type FriendChatSummary = {
   conversationId: string;

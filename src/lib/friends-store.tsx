@@ -27,6 +27,8 @@ export type Person = {
   lastSeenMinutes: number;
   accent: "teal" | "coral" | "butter";
   phone?: string;
+  /** آخر ظهور (ISO) */
+  lastSeenAt?: string | null;
 };
 
 export type Relation = "none" | "friend" | "incoming" | "outgoing" | "blocked";
@@ -55,6 +57,7 @@ type CloudUserRow = {
   role_en: string;
   status: UserStatus;
   last_seen_minutes?: number | null;
+  last_seen_at?: string | null;
   accent?: Person["accent"];
   phone?: string | null;
 };
@@ -130,7 +133,14 @@ export function FriendsProvider({ children }: { children: ReactNode }) {
     let subscribed = false;
 
     const sync = () => setOnlineIds(new Set(Object.keys(channel.presenceState())));
+    // "آخر ظهور": نحفظ الوقت بقاعدة البيانات (يتجاهل الخطأ إذا ملف SQL بعده ما انشغّل)
+    const touch = () => {
+      void supabase.rpc("touch_last_seen").then(({ error }) => {
+        if (error) console.warn("آخر ظهور غير مفعّل بعد:", error.message);
+      });
+    };
     const announce = () => {
+      touch();
       if (!subscribed) return;
       if (document.visibilityState === "visible") {
         void channel.track({ at: Date.now() });
@@ -138,6 +148,9 @@ export function FriendsProvider({ children }: { children: ReactNode }) {
         void channel.untrack();
       }
     };
+    const seenTimer = window.setInterval(() => {
+      if (document.visibilityState === "visible") touch();
+    }, 60_000);
 
     channel
       .on("presence", { event: "sync" }, sync)
@@ -153,6 +166,7 @@ export function FriendsProvider({ children }: { children: ReactNode }) {
     document.addEventListener("visibilitychange", announce);
     window.addEventListener("pagehide", announce);
     return () => {
+      window.clearInterval(seenTimer);
       document.removeEventListener("visibilitychange", announce);
       window.removeEventListener("pagehide", announce);
       void channel.untrack();
@@ -199,6 +213,7 @@ export function FriendsProvider({ children }: { children: ReactNode }) {
           roleEn: item.role_en,
           status: item.status,
           lastSeenMinutes: item.last_seen_minutes || 0,
+          lastSeenAt: item.last_seen_at ?? null,
           accent: item.accent || "teal",
           phone: item.phone
         }));
@@ -363,6 +378,16 @@ export function FriendsProvider({ children }: { children: ReactNode }) {
       window.removeEventListener("focus", onVisible);
     };
   }, [profile.id, refreshFriends]);
+
+  // لما صديق يطلع من التطبيق، نجيب وقت "آخر ظهور" الجديد مالته
+  const prevOnline = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    const left = [...prevOnline.current].some((id) => !onlineIds.has(id));
+    prevOnline.current = onlineIds;
+    if (!left) return;
+    const timer = window.setTimeout(() => void fetchCloudUsers(), 2000);
+    return () => window.clearTimeout(timer);
+  }, [onlineIds, fetchCloudUsers]);
 
   // إذا وصل طلب/صداقة من شخص مو موجود بقائمة الحسابات (سجّل بعد ما فتحنا التطبيق)، نجيب بياناته
   const triedMissing = useRef<Set<string>>(new Set());

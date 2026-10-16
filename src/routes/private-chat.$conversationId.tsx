@@ -13,6 +13,7 @@ import {
   getPrivateConversation,
   getPrivateMessages,
   markConversationRead,
+  markConversationReadRemote,
   sendPrivateMessage,
   subscribeToPrivateMessages,
   type PrivateMessage,
@@ -93,6 +94,23 @@ function CallMenu({ onVoice, onVideo }: { onVoice: () => void; onVideo: () => vo
   );
 }
 
+// "آخر ظهور اليوم 2:30 م" / "أمس" / تاريخ
+function formatLastSeen(iso?: string | null): string {
+  if (!iso) return "غير متصل";
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "غير متصل";
+  const diffMin = Math.floor((Date.now() - date.getTime()) / 60000);
+  if (diffMin < 1) return "آخر ظهور قبل لحظات";
+  const time = new Intl.DateTimeFormat("ar-IQ", { hour: "numeric", minute: "2-digit" }).format(date);
+  const startOfToday = new Date();
+  startOfToday.setHours(0, 0, 0, 0);
+  const dayMs = 86_400_000;
+  if (date.getTime() >= startOfToday.getTime()) return `آخر ظهور اليوم ${time}`;
+  if (date.getTime() >= startOfToday.getTime() - dayMs) return `آخر ظهور أمس ${time}`;
+  const day = new Intl.DateTimeFormat("ar-IQ", { day: "numeric", month: "long" }).format(date);
+  return `آخر ظهور ${day}`;
+}
+
 function PrivateChatPage() {
   const { conversationId } = Route.useParams();
   const { directory, profile, isOnline: isOnlineNow } = useFriends();
@@ -137,9 +155,18 @@ function PrivateChatPage() {
     };
 
     void load();
-    const unsubscribe = subscribeToPrivateMessages(conversationId, (message) => {
-      setMessages((current) => current.some((item) => item.id === message.id) ? current : [...current, message]);
-    });
+    const unsubscribe = subscribeToPrivateMessages(
+      conversationId,
+      (message) => {
+        setMessages((current) => current.some((item) => item.id === message.id) ? current : [...current, message]);
+      },
+      // تحديث رسالة (مثلاً صديقك قرأها) → تتحول العلامة ✓✓ زرقاء
+      (updated) => {
+        setMessages((current) =>
+          current.map((item) => (item.id === updated.id ? { ...item, ...updated } : item)),
+        );
+      },
+    );
 
     return () => {
       active = false;
@@ -153,6 +180,21 @@ function PrivateChatPage() {
     const last = messages[messages.length - 1];
     markConversationRead(conversationId, last?.created_at);
   }, [messages, conversationId]);
+
+  // نبلّغ صديقك إننا قرينا رسائله (✓✓ زرقاء عنده) — فقط والتطبيق قدامنا
+  const hasUnreadFromOther = messages.some((m) => m.sender_id !== profile.id && !m.read_at);
+  useEffect(() => {
+    if (!hasUnreadFromOther || !profile.id) return;
+    const mark = () => {
+      if (document.visibilityState === "visible") void markConversationReadRemote(conversationId);
+    };
+    const timer = window.setTimeout(mark, 600);
+    document.addEventListener("visibilitychange", mark);
+    return () => {
+      window.clearTimeout(timer);
+      document.removeEventListener("visibilitychange", mark);
+    };
+  }, [hasUnreadFromOther, conversationId, profile.id]);
 
   const otherUser = directory.find((person) => person.id === otherUserId);
   const title = otherUser?.name || "محادثة خاصة";
@@ -343,7 +385,7 @@ function PrivateChatPage() {
                 ? "يسجّل رسالة صوتية…"
                 : isOnline
                   ? "متصل الآن"
-                  : "غير متصل"}
+                  : formatLastSeen(otherUser?.lastSeenAt)}
           </p>
         </div>
         {otherUserId ? (
@@ -378,8 +420,16 @@ function PrivateChatPage() {
                 ) : (
                   <p className="whitespace-pre-wrap break-words">{message.content}</p>
                 )}
-                <p className={`mt-0.5 text-end text-[10px] opacity-60 ${message.kind === "image" ? "px-2 pb-0.5" : ""}`}>
-                  {formatTime(message.created_at)}
+                <p className={`mt-0.5 text-end text-[10px] ${message.kind === "image" ? "px-2 pb-0.5" : ""}`}>
+                  <span className="opacity-60">{formatTime(message.created_at)}</span>
+                  {mine ? (
+                    <span
+                      className={`ms-1 font-bold ${message.read_at ? "text-sky-500" : "opacity-60"}`}
+                      title={message.read_at ? "قُرئت" : "أُرسلت"}
+                    >
+                      {message.read_at ? "✓✓" : "✓"}
+                    </span>
+                  ) : null}
                 </p>
               </div>
             </div>
