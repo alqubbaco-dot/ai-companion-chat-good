@@ -5,6 +5,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -95,6 +96,8 @@ type FriendsValue = {
   refreshProfile: () => Promise<void>;
   /** متصل فعلاً الآن (التطبيق مفتوح قدامه) — من Supabase Presence */
   isOnline: (id: string) => boolean;
+  /** إعادة جلب الطلبات والأصدقاء من السحابة */
+  refreshFriends: () => Promise<void>;
 };
 
 const FriendsContext = createContext<FriendsValue | null>(null);
@@ -158,6 +161,7 @@ export function FriendsProvider({ children }: { children: ReactNode }) {
   }, [profile.id]);
 
   const isOnline = useCallback((id: string) => onlineIds.has(id), [onlineIds]);
+
 
   const refreshRelations = useCallback(async (userId: string) => {
     // علاقاتي من قاعدة البيانات عن طريق دالة آمنة (my_relations)
@@ -305,6 +309,12 @@ export function FriendsProvider({ children }: { children: ReactNode }) {
       .on("postgres_changes", { event: "*", schema: "public", table: "users_directory" }, () => {
         fetchCloudUsers();
       })
+      // أي طلب صداقة جديد/قبول/رفض: نحدّث العلاقات فوراً (إذا الجدول مفعّل بالـ Realtime)
+      .on("postgres_changes", { event: "*", schema: "public", table: "friendships" }, () => {
+        void supabase.auth.getUser().then(({ data }) => {
+          if (data.user) void refreshRelations(data.user.id);
+        });
+      })
       .subscribe();
 
     const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -330,6 +340,63 @@ export function FriendsProvider({ children }: { children: ReactNode }) {
       authListener.subscription.unsubscribe();
     };
   }, [fetchCloudUsers, refreshProfile, refreshRelations]);
+
+  // تحديث الطلبات والأصدقاء: عند الرجوع للتطبيق، وكل 30 ثانية وهو مفتوح قدام المستخدم
+  const refreshFriends = useCallback(async () => {
+    const { data } = await supabase.auth.getUser();
+    const userId = data.user?.id;
+    if (!userId) return;
+    await Promise.all([refreshRelations(userId), fetchCloudUsers()]);
+  }, [refreshRelations, fetchCloudUsers]);
+
+  useEffect(() => {
+    if (!profile.id) return;
+    const onVisible = () => {
+      if (document.visibilityState === "visible") void refreshFriends();
+    };
+    const timer = window.setInterval(onVisible, 30_000);
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("focus", onVisible);
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("focus", onVisible);
+    };
+  }, [profile.id, refreshFriends]);
+
+  // إذا وصل طلب/صداقة من شخص مو موجود بقائمة الحسابات (سجّل بعد ما فتحنا التطبيق)، نجيب بياناته
+  const triedMissing = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    const ids = [...relations.friends, ...relations.incoming, ...relations.outgoing, ...relations.blocked];
+    const known = new Set(directory.map((p) => p.id));
+    const missing = ids.filter((id) => !known.has(id) && !triedMissing.current.has(id));
+    if (missing.length === 0) return;
+    missing.forEach((id) => triedMissing.current.add(id));
+    void (async () => {
+      const { data, error } = await supabase
+        .from("users_directory")
+        .select("id,name,name_en,handle,role,role_en,status,accent")
+        .in("id", missing);
+      if (error || !data || data.length === 0) return;
+      setDirectory((prev) => {
+        const have = new Set(prev.map((p) => p.id));
+        const added = (data as CloudUserRow[])
+          .filter((item) => !have.has(item.id))
+          .map((item) => ({
+            id: item.id,
+            name: item.name,
+            nameEn: item.name_en || item.name,
+            handle: item.handle,
+            role: item.role,
+            roleEn: item.role_en,
+            status: item.status,
+            lastSeenMinutes: 0,
+            accent: item.accent || "teal",
+          })) as Person[];
+        return added.length ? [...prev, ...added] : prev;
+      });
+    })();
+  }, [relations, directory]);
 
   // كل عمليات الصداقة تمر من دالة وحدة بقاعدة البيانات (friend_action)
   const runAction = useCallback(
@@ -426,8 +493,9 @@ export function FriendsProvider({ children }: { children: ReactNode }) {
       },
       refreshProfile,
       isOnline,
+      refreshFriends,
     };
-  }, [hydrated, directory, profile, relations, byIds, relationOf, sendRequest, cancelRequest, acceptRequest, rejectRequest, removeFriend, blockUser, unblockUser, refreshProfile, isOnline]);
+  }, [hydrated, directory, profile, relations, byIds, relationOf, sendRequest, cancelRequest, acceptRequest, rejectRequest, removeFriend, blockUser, unblockUser, refreshProfile, isOnline, refreshFriends]);
 
   return <FriendsContext.Provider value={value}>{children}</FriendsContext.Provider>;
 }

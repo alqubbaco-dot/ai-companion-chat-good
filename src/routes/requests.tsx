@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { PageBody } from "@/components/app/AppShell";
 import { PersonRow, RowButton } from "@/components/friends/PersonRow";
@@ -21,8 +22,13 @@ export const Route = createFileRoute("/requests")({
 
 function RequestsPage() {
   const { t } = useI18n();
-  const { incoming, outgoing, acceptRequest, rejectRequest, blockUser, cancelRequest } =
+  const { incoming, outgoing, acceptRequest, rejectRequest, blockUser, cancelRequest, refreshFriends } =
     useFriends();
+
+  // أول ما تنفتح الصفحة نجيب آخر الطلبات
+  useEffect(() => {
+    void refreshFriends();
+  }, [refreshFriends]);
 
   return (
     <PageBody title={t("requestsTitle")} subtitle={t("requestsSubtitle")}>
