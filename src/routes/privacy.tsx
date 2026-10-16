@@ -148,6 +148,10 @@ function PrivacyPage() {
               البيانات تنتقل بشكل مشفّر (HTTPS)، وقاعدة البيانات محمية بحيث كل مستخدم يشوف بس محادثاته وأصدقاءه.
               ما في نظام محمي 100%، بس نسوي كل اللي نكدر عليه حتى نحافظ على معلوماتك.
             </p>
+            <p>
+              <b>الحظر والإبلاغ:</b> من داخل أي محادثة اضغط ⋮ حتى تحظر شخص أو تبلّغ عنه. البلاغ يوصل لإدارة التطبيق بس
+              (سبب البلاغ وملاحظتك ورقم المحادثة)، والشخص المبلَّغ عنه ما يعرف منو بلّغ عليه. نراجع البلاغات ونوقف الحسابات المخالفة.
+            </p>
           </Section>
 
           <Section title="6. حذف الحساب والبيانات" id="delete-account">
@@ -220,6 +224,11 @@ function PrivacyPage() {
             <p>
               <b>Security:</b> data is encrypted in transit (HTTPS) and database access is restricted so each user
               can only read their own conversations and friends.
+            </p>
+            <p>
+              <b>Blocking and reporting:</b> inside any chat, tap ⋮ to block or report a user. Reports (reason, your
+              note and the conversation reference) go only to the app's administrators; the reported user is not told
+              who reported them. We review reports and suspend accounts that break the rules.
             </p>
             <p>
               <b>Account and data deletion:</b> you can delete your account and all associated data (including points and unlocked features) yourself at

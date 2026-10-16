@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { toast } from "sonner";
-import { ChevronDown, Phone, Video } from "lucide-react";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { Ban, ChevronDown, Flag, MoreVertical, Phone, Video } from "lucide-react";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useFriends } from "@/lib/friends-store";
 import { useCall } from "@/lib/call-store";
 import { notifyFriend } from "@/lib/push-client";
@@ -95,6 +95,231 @@ function CallMenu({ onVoice, onVideo }: { onVoice: () => void; onVideo: () => vo
   );
 }
 
+// زر ⋮ بأعلى المحادثة: قائمة منسدلة بيها (إبلاغ / حظر)
+function MoreMenu({
+  blocked,
+  onReport,
+  onBlock,
+  onUnblock,
+}: {
+  blocked: boolean;
+  onReport: () => void;
+  onBlock: () => void;
+  onUnblock: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const boxRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const close = (e: PointerEvent) => {
+      if (boxRef.current && !boxRef.current.contains(e.target as Node)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("pointerdown", close);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("pointerdown", close);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
+  const pick = (action: () => void) => {
+    setOpen(false);
+    action();
+  };
+
+  const itemClass =
+    "flex w-full items-center gap-3 px-4 py-3 text-start font-display text-[15px] font-bold hover:bg-ink/5 active:bg-ink/10";
+
+  return (
+    <div ref={boxRef} className="relative shrink-0">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="grid size-10 place-items-center rounded-full text-ink transition-transform hover:bg-ink/5 active:scale-95"
+        title="خيارات"
+        aria-label="خيارات"
+        aria-haspopup="menu"
+        aria-expanded={open}
+      >
+        <MoreVertical className="size-[22px]" strokeWidth={1.8} />
+      </button>
+      {open ? (
+        <div
+          role="menu"
+          className="absolute end-0 top-full z-50 mt-2 w-52 overflow-hidden rounded-2xl border-2 border-line bg-cream py-1.5 shadow-lg"
+        >
+          <button type="button" role="menuitem" onClick={() => pick(onReport)} className={itemClass}>
+            <Flag className="size-5 shrink-0 text-amber-600" strokeWidth={1.8} />
+            إبلاغ
+          </button>
+          {blocked ? (
+            <button type="button" role="menuitem" onClick={() => pick(onUnblock)} className={itemClass}>
+              <Ban className="size-5 shrink-0 text-muted-ink" strokeWidth={1.8} />
+              إلغاء الحظر
+            </button>
+          ) : (
+            <button type="button" role="menuitem" onClick={() => pick(onBlock)} className={`${itemClass} text-red-600`}>
+              <Ban className="size-5 shrink-0" strokeWidth={1.8} />
+              حظر
+            </button>
+          )}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+const REPORT_REASONS: { id: string; label: string }[] = [
+  { id: "spam", label: "إزعاج أو رسائل كثيرة" },
+  { id: "abuse", label: "كلام مسيء أو تهديد" },
+  { id: "scam", label: "احتيال أو نصب" },
+  { id: "fake", label: "حساب مزيّف أو ينتحل شخصية" },
+  { id: "other", label: "سبب ثاني" },
+];
+
+// نافذة صغيرة بنص الشاشة (للإبلاغ ولتأكيد الحظر)
+function Sheet({ children, onClose }: { children: ReactNode; onClose: () => void }) {
+  return (
+    <div
+      className="fixed inset-0 z-[60] flex items-end justify-center bg-ink/40 p-3 sm:items-center"
+      onClick={onClose}
+      role="presentation"
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        className="max-h-[90vh] w-full max-w-sm overflow-y-auto rounded-3xl border-2 border-line bg-cream p-5 shadow-xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function ReportDialog({
+  name,
+  alreadyBlocked,
+  onClose,
+  onSubmit,
+}: {
+  name: string;
+  alreadyBlocked: boolean;
+  onClose: () => void;
+  onSubmit: (reason: string, note: string, alsoBlock: boolean) => Promise<void>;
+}) {
+  const [reason, setReason] = useState("");
+  const [note, setNote] = useState("");
+  const [alsoBlock, setAlsoBlock] = useState(!alreadyBlocked);
+  const [busy, setBusy] = useState(false);
+
+  const submit = async () => {
+    if (!reason || busy) return;
+    setBusy(true);
+    try {
+      await onSubmit(reason, note, alsoBlock && !alreadyBlocked);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Sheet onClose={busy ? () => undefined : onClose}>
+      <h2 className="font-display text-lg font-extrabold">الإبلاغ عن {name}</h2>
+      <p className="mt-1 text-[13px] text-muted-ink">
+        البلاغ يوصل لإدارة التطبيق بس، و{name} ما يعرف منو بلّغ عليه.
+      </p>
+      <div className="mt-4 space-y-2">
+        {REPORT_REASONS.map((r) => (
+          <label
+            key={r.id}
+            className={`flex cursor-pointer items-center gap-3 rounded-2xl border-2 px-3 py-2.5 text-[14px] font-bold ${
+              reason === r.id ? "border-ink bg-butter/30" : "border-line"
+            }`}
+          >
+            <input
+              type="radio"
+              name="report-reason"
+              value={r.id}
+              checked={reason === r.id}
+              onChange={() => setReason(r.id)}
+              className="size-4 accent-ink"
+            />
+            {r.label}
+          </label>
+        ))}
+      </div>
+      <textarea
+        value={note}
+        onChange={(e) => setNote(e.target.value.slice(0, 500))}
+        placeholder="تفاصيل إضافية (اختياري)"
+        rows={3}
+        className="mt-3 w-full resize-none rounded-2xl border-2 border-line bg-paper px-3 py-2 text-[14px] outline-none focus:border-ink"
+      />
+      {!alreadyBlocked ? (
+        <label className="mt-3 flex cursor-pointer items-center gap-3 text-[14px] font-bold">
+          <input
+            type="checkbox"
+            checked={alsoBlock}
+            onChange={(e) => setAlsoBlock(e.target.checked)}
+            className="size-4 accent-ink"
+          />
+          واحظره هم (ما يكدر يراسلك أو يتصل بيك)
+        </label>
+      ) : null}
+      <div className="mt-5 flex gap-2">
+        <button
+          type="button"
+          onClick={() => void submit()}
+          disabled={!reason || busy}
+          className="flex-1 rounded-full border-2 border-ink bg-ink px-4 py-2.5 font-display font-bold text-cream disabled:opacity-40"
+        >
+          {busy ? "جاري الإرسال…" : "إرسال البلاغ"}
+        </button>
+        <button
+          type="button"
+          onClick={onClose}
+          disabled={busy}
+          className="rounded-full border-2 border-line px-4 py-2.5 font-display font-bold"
+        >
+          إلغاء
+        </button>
+      </div>
+    </Sheet>
+  );
+}
+
+function BlockConfirm({ name, onClose, onConfirm }: { name: string; onClose: () => void; onConfirm: () => void }) {
+  return (
+    <Sheet onClose={onClose}>
+      <h2 className="font-display text-lg font-extrabold">تحظر {name}؟</h2>
+      <p className="mt-2 text-[14px] text-muted-ink">
+        ما يكدر يراسلك ولا يتصل بيك، وينشال من أصدقائك. تكدر تلغي الحظر بعدين من صفحة الأصدقاء.
+      </p>
+      <div className="mt-5 flex gap-2">
+        <button
+          type="button"
+          onClick={onConfirm}
+          className="flex-1 rounded-full border-2 border-red-600 bg-red-600 px-4 py-2.5 font-display font-bold text-white"
+        >
+          حظر
+        </button>
+        <button
+          type="button"
+          onClick={onClose}
+          className="rounded-full border-2 border-line px-4 py-2.5 font-display font-bold"
+        >
+          إلغاء
+        </button>
+      </div>
+    </Sheet>
+  );
+}
+
 // "آخر ظهور اليوم 2:30 م" / "أمس" / تاريخ
 function formatLastSeen(iso?: string | null): string {
   if (!iso) return "غير متصل";
@@ -114,8 +339,10 @@ function formatLastSeen(iso?: string | null): string {
 
 function PrivateChatPage() {
   const { conversationId } = Route.useParams();
-  const { directory, profile, isOnline: isOnlineNow } = useFriends();
+  const { directory, profile, isOnline: isOnlineNow, relationOf, blockUser, unblockUser } = useFriends();
   const { startCall } = useCall();
+  const navigate = useNavigate();
+  const [dialog, setDialog] = useState<null | "report" | "block">(null);
   const [messages, setMessages] = useState<PrivateMessage[]>([]);
   const [otherUserId, setOtherUserId] = useState("");
   const [draft, setDraft] = useState("");
@@ -351,6 +578,42 @@ function PrivateChatPage() {
     };
   }, [recorder.recording, sendActivity]);
 
+  const isBlocked = otherUserId ? relationOf(otherUserId) === "blocked" : false;
+
+  const handleBlock = async () => {
+    setDialog(null);
+    if (!otherUserId) return;
+    await blockUser(otherUserId);
+    toast.success(`انحظر ${title}`);
+    navigate({ to: "/friends" });
+  };
+
+  // البلاغ يروح لجدول user_reports بـ Supabase (supabase/reports.sql)
+  const handleReport = async (reason: string, note: string, alsoBlock: boolean) => {
+    if (!otherUserId) return;
+    const { error: reportError } = await supabase.rpc("report_user", {
+      p_reported: otherUserId,
+      p_reason: reason,
+      p_note: note || null,
+      p_conversation: conversationId,
+    });
+    if (reportError) {
+      console.error("تعذر إرسال البلاغ:", reportError);
+      toast.error(
+        reportError.message.includes("too_many_reports")
+          ? "وصلت الحد اليومي للبلاغات، جرّب باچر"
+          : "ما گدرنا نرسل البلاغ هسه، جرّب بعد شوية",
+      );
+      return;
+    }
+    setDialog(null);
+    toast.success("وصلنا بلاغك، شكراً. راح نراجعه 🙏");
+    if (alsoBlock) {
+      await blockUser(otherUserId);
+      navigate({ to: "/friends" });
+    }
+  };
+
   const isOnline = otherUserId ? isOnlineNow(otherUserId) : false;
   const formatTime = (iso: string) =>
     new Intl.DateTimeFormat("ar-IQ", { hour: "numeric", minute: "2-digit" }).format(new Date(iso));
@@ -387,13 +650,39 @@ function PrivateChatPage() {
                   : formatLastSeen(otherUser?.lastSeenAt)}
           </p>
         </div>
-        {otherUserId ? (
+        {otherUserId && !isBlocked ? (
           <CallMenu
             onVoice={() => void startCall(otherUserId, title)}
             onVideo={() => void startCall(otherUserId, title, true)}
           />
         ) : null}
+        {otherUserId ? (
+          <MoreMenu
+            blocked={isBlocked}
+            onReport={() => setDialog("report")}
+            onBlock={() => setDialog("block")}
+            onUnblock={() => void unblockUser(otherUserId)}
+          />
+        ) : null}
       </header>
+
+      {dialog === "report" ? (
+        <ReportDialog
+          name={title}
+          alreadyBlocked={isBlocked}
+          onClose={() => setDialog(null)}
+          onSubmit={handleReport}
+        />
+      ) : null}
+      {dialog === "block" ? (
+        <BlockConfirm name={title} onClose={() => setDialog(null)} onConfirm={() => void handleBlock()} />
+      ) : null}
+
+      {isBlocked ? (
+        <p className="shrink-0 border-b-2 border-line bg-red-50 px-4 py-2 text-center text-[13px] font-bold text-red-700">
+          حظرت هذا الشخص. ما يكدر يراسلك أو يتصل بيك.
+        </p>
+      ) : null}
 
       {/* الرسائل */}
       <div className="min-h-0 flex-1 space-y-2 overflow-y-auto px-3 py-4">
