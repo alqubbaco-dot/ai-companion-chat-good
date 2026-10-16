@@ -29,11 +29,11 @@ const FEATURE_EMOJI: Record<string, string> = {
   themes: "🎨",
   ringtone: "🔔",
   funny_characters: "🤡",
-  voice_changer: "🎙️",
+  stickers: "🏷️",
 };
 
 // الميزات الجاهزة فعلاً بالتطبيق. الباقي يطلع "قريباً" وما ينشرى لحد ما نبنيه
-const READY_FEATURES = new Set(["themes", "funny_characters", "ringtone"]);
+const READY_FEATURES = new Set(["themes", "funny_characters", "ringtone", "stickers"]);
 
 const AD_ERRORS: Record<string, string> = {
   login_required: "سجّل دخولك أول حتى تنحسب النقاط باسمك",
