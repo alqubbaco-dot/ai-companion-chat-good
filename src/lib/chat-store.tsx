@@ -48,6 +48,9 @@ const KEY = "conversations";
 export function ChatProvider({ children }: { children: ReactNode }) {
   const { lang } = useI18n();
   const [conversations, setConversations] = useState<Conversation[]>([]);
+  // آخر نسخة من المحادثات، حتى نرسل للغبي اللي صار قبل (ذاكرة المحادثة)
+  const conversationsRef = useRef<Conversation[]>([]);
+  conversationsRef.current = conversations;
   const [hydrated, setHydrated] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
   const [streamingId, setStreamingId] = useState<string | null>(null);
@@ -109,6 +112,12 @@ export function ChatProvider({ children }: { children: ReactNode }) {
 
       cancelRef.current?.();
 
+      // آخر 10 رسائل من نفس المحادثة (بدون رسائل الخطأ والفارغة)
+      const history = (conversationsRef.current.find((c) => c.id === conversationId)?.messages ?? [])
+        .filter((m) => m.content.trim() && !m.content.startsWith("⚠️"))
+        .slice(-10)
+        .map((m) => ({ role: m.role, text: m.content }));
+
       const userMessage: ChatMessage = {
         id: createId("msg"),
         role: "user",
@@ -147,6 +156,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
 
       cancelRef.current = streamSimulatedReply(
         trimmed,
+        history,
         lang,
         isFunny,
         (partial) => write(partial, false),
