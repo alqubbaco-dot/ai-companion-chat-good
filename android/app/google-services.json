@@ -7,6 +7,25 @@
   "client": [
     {
       "client_info": {
+        "mobilesdk_app_id": "1:409985684747:android:3d34fefbc81faf37b2be0e",
+        "android_client_info": {
+          "package_name": "com.alqubba.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCczO5XJLmGDjWWQRcZ3aSbMym8gL7lLKw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
         "mobilesdk_app_id": "1:409985684747:android:42c014129a377052b2be0e",
         "android_client_info": {
           "package_name": "com.ghabiy.app"
