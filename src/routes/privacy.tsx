@@ -12,8 +12,8 @@ export const Route = createFileRoute("/privacy")({
   component: PrivacyPage,
 });
 
-const UPDATED = "15 أكتوبر 2026";
-const UPDATED_EN = "October 15, 2026";
+const UPDATED = "16 أكتوبر 2026";
+const UPDATED_EN = "October 16, 2026";
 const CONTACT = "abnalramady@gmail.com";
 
 function Section({ title, children, id }: { title: string; children: ReactNode; id?: string }) {
@@ -46,16 +46,30 @@ function PrivacyPage() {
           <Section title="1. المعلومات اللي نجمعها">
             <ul className="list-disc space-y-1 ps-5">
               <li>
-                <b>رقم الهاتف:</b> حتى تسجّل دخول وحتى أصدقاءك يكدرون يلگونك بالبحث.
+                <b>الإيميل وكلمة السر:</b> حتى تسوّي حساب وتسجّل دخول. كلمة السر تنحفظ مشفّرة وما يكدر يشوفها أحد.
               </li>
               <li>
-                <b>معلومات الملف الشخصي:</b> الاسم واسم المستخدم والنبذة اللي تكتبها بنفسك.
+                <b>رقم الهاتف (اختياري):</b> إذا كتبته، أصدقاءك يكدرون يلگونك بالبحث برقمك. الرقم ما يطلع لأي أحد،
+                البحث يطلّع الاسم بس.
+              </li>
+              <li>
+                <b>معلومات الملف الشخصي:</b> الاسم واسم المستخدم والصورة الشخصية (إذا حطيت صورة).
               </li>
               <li>
                 <b>قائمة الأصدقاء:</b> طلبات الصداقة والأصدقاء والمحظورين.
               </li>
               <li>
-                <b>الرسائل الخاصة:</b> نص الرسائل اللي تتبادلها ويا أصدقاءك، حتى توصلهم وتبقى محفوظة بمحادثتكم.
+                <b>الرسائل الخاصة:</b> نص الرسائل والصور والرسائل الصوتية اللي تتبادلها ويا أصدقاءك، حتى توصلهم
+                وتبقى محفوظة بمحادثتكم. الصور والأصوات محفوظة بمخزن خاص ما يفتحه غير أطراف المحادثة.
+              </li>
+              <li>
+                <b>سجل المكالمات:</b> منو اتصل بمنو، ووقت المكالمة ومدتها، وهل كانت صوت أو فيديو (بدون أي صوت أو صورة).
+              </li>
+              <li>
+                <b>حالة الاتصال:</b> «متصل الآن» و«آخر ظهور» وعلامات قراءة الرسائل ✓✓، وتنعرض لأصدقاءك بس.
+              </li>
+              <li>
+                <b>البلاغات:</b> إذا بلّغت عن شخص، نحفظ سبب البلاغ وملاحظتك حتى نراجعه.
               </li>
               <li>
                 <b>محادثات المساعد («الغبي»):</b> الأسئلة اللي ترسلها للمساعد الذكي.
@@ -75,7 +89,9 @@ function PrivacyPage() {
 
           <Section title="2. المكالمات والمايكروفون والكاميرا">
             <p>
-              المكالمات الصوتية ومكالمات الفيديو تروح <b>مباشرة بين جهازك وجهاز صديقك</b> (تقنية WebRTC). إحنا{" "}
+              المكالمات الصوتية ومكالمات الفيديو تروح <b>مباشرة بين جهازك وجهاز صديقك</b> (تقنية WebRTC)، وتكون مشفّرة.
+              إذا شبكة الموبايل منعت الربط المباشر، المكالمة تمر مشفّرة عن طريق سيرفر وسيط (Cloudflare) بدون ما ينحفظ
+              منها شي. إحنا{" "}
               <b>ما نسجّل المكالمات ولا نحفظ الصوت أو الصورة</b> على أي سيرفر. نستخدم المايكروفون والكاميرا
               بس أثناء المكالمة اللي إنت تبدأها أو ترد عليها.
             </p>
@@ -116,7 +132,10 @@ function PrivacyPage() {
           <Section title="4. الخدمات اللي نعتمد عليها">
             <ul className="list-disc space-y-1 ps-5">
               <li>
-                <b>Supabase:</b> لحفظ الحسابات والأصدقاء والرسائل، وتوصيل إشارات المكالمات.
+                <b>Supabase:</b> لحفظ الحسابات والأصدقاء والرسائل والصور والرسائل الصوتية، وتوصيل إشارات المكالمات.
+              </li>
+              <li>
+                <b>Cloudflare:</b> سيرفر وسيط للمكالمات لما الشبكة تمنع الربط المباشر (يمرّر بس، وما يحفظ شي).
               </li>
               <li>
                 <b>Google Firebase Cloud Messaging:</b> لإرسال إشعارات المكالمات والرسائل لتطبيق الأندرويد.
@@ -183,15 +202,22 @@ function PrivacyPage() {
           <p className="text-sm text-muted-ink">"Qubba Chat" (القبة) — Last updated: {UPDATED_EN}</p>
           <div className="space-y-3 text-[15px] leading-7 text-ink/85">
             <p>
-              <b>Data we collect:</b> your phone number (for sign-in and friend search), profile details you enter
-              (name, username, bio), your friends list, the text of private messages you exchange with friends,
+              <b>Data we collect:</b> your email address and password (for sign-up and sign-in; the password is
+              stored hashed), your phone number if you choose to add it (so friends can find you; it is never shown to
+              others), profile details you enter (name, username, profile photo), your friends list, the text, photos
+              and voice messages you exchange with friends (media is kept in private storage only the chat members can
+              open), your call history (who called whom, when, duration, voice or video — never audio or video
+              content), your online status, last seen and read receipts (shown only to your friends), reports you
+              submit about other users,
               questions you send to the in-app AI assistant, a device token used to deliver call and message
               notifications, your points record (rewarded ads completed, points balance, features unlocked), and —
               through Google AdMob in the Android app — your device's advertising ID and device information used to
               serve and measure ads.
             </p>
             <p>
-              <b>Calls:</b> voice and video calls are peer-to-peer (WebRTC). We do not record calls or store any
+              <b>Calls:</b> voice and video calls are encrypted and peer-to-peer (WebRTC). When a mobile network blocks
+              a direct connection, the encrypted call is relayed through a Cloudflare TURN server, which stores nothing.
+              We do not record calls or store any
               audio or video. The microphone and camera are used only during a call you start or answer.
             </p>
             <p>
@@ -218,7 +244,8 @@ function PrivacyPage() {
               .
             </p>
             <p>
-              <b>Service providers:</b> Supabase (accounts, messages, call signaling), Google Firebase Cloud
+              <b>Service providers:</b> Supabase (accounts, messages, photos and voice messages, call signaling),
+              Cloudflare (call relay when needed), Google Firebase Cloud
               Messaging (notifications), Google Gemini (AI assistant replies), Google AdMob (rewarded ads), and Vercel (hosting).
             </p>
             <p>
