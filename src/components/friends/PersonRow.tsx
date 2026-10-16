@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { useRef, useState } from "react";
 import { useFriends, type Person } from "@/lib/friends-store";
+import { PersonPhoto } from "@/components/app/Avatar";
 import { useI18n } from "@/lib/i18n";
 import { useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
@@ -111,9 +112,12 @@ export function PersonRow({
         title={isFriendRow ? "اضغط للمراسلة · اضغط مطوّلاً للخيارات" : undefined}
       >
         <div className="relative shrink-0">
-          <div className={`grid size-12 place-items-center rounded-full font-display text-lg font-bold ${accentBg[person.accent]}`}>
-            {name.charAt(0)}
-          </div>
+          <PersonPhoto
+            src={person.avatarUrl}
+            name={name}
+            className="size-12 text-lg"
+            fallbackClassName={accentBg[person.accent]}
+          />
           <span className={`absolute -bottom-0.5 -start-0.5 size-3.5 rounded-full ring-2 ring-cream ${isOnline ? "bg-emerald-500" : "bg-red-300"}`} title={isOnline ? "متصل الآن" : "غير متصل"} />
         </div>
 

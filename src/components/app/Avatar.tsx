@@ -1,3 +1,5 @@
+import { useState } from "react";
+
 // صورة رمزية موحّدة: شعار التطبيق للمساعد، وحرف ملوّن بتدرّج ثابت لكل شخص
 const GRADIENTS = [
   "from-sky-400 to-indigo-500",
@@ -26,13 +28,19 @@ export function Avatar({
   size = "md",
   bot = false,
   className = "",
+  src,
 }: {
   name?: string;
   size?: keyof typeof SIZES;
   bot?: boolean;
   className?: string;
+  /** رابط الصورة الشخصية (إذا موجودة) */
+  src?: string | null;
 }) {
   const sizeClass = SIZES[size];
+  if (src && !bot) {
+    return <PersonPhoto src={src} name={name} className={`${sizeClass} ${className}`} />;
+  }
   if (bot) {
     return (
       <img
@@ -56,5 +64,38 @@ export function Avatar({
     >
       {letter}
     </div>
+  );
+}
+
+/** صورة شخص دائرية، وإذا ما انفتحت ترجع للحرف الأول */
+export function PersonPhoto({
+  src,
+  name,
+  className = "",
+  fallbackClassName = "",
+}: {
+  src?: string | null;
+  name?: string;
+  className?: string;
+  fallbackClassName?: string;
+}) {
+  const [failed, setFailed] = useState(false);
+  const letter = (name || "").trim().charAt(0) || "؟";
+  if (!src || failed) {
+    return (
+      <div className={`grid shrink-0 place-items-center rounded-full font-display font-bold select-none ${className} ${fallbackClassName}`}>
+        {letter}
+      </div>
+    );
+  }
+  return (
+    <img
+      src={src}
+      alt={name || ""}
+      loading="lazy"
+      draggable={false}
+      onError={() => setFailed(true)}
+      className={`shrink-0 rounded-full bg-ink/10 object-cover select-none ${className}`}
+    />
   );
 }

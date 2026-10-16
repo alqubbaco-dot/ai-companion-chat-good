@@ -29,6 +29,8 @@ export type Person = {
   phone?: string;
   /** آخر ظهور (ISO) */
   lastSeenAt?: string | null;
+  /** الصورة الشخصية */
+  avatarUrl?: string | null;
 };
 
 export type Relation = "none" | "friend" | "incoming" | "outgoing" | "blocked";
@@ -39,6 +41,7 @@ export type Profile = {
   handle: string;
   bio: string;
   phone?: string;
+  avatarUrl?: string | null;
 };
 
 type Relations = {
@@ -58,6 +61,7 @@ type CloudUserRow = {
   status: UserStatus;
   last_seen_minutes?: number | null;
   last_seen_at?: string | null;
+  avatar_url?: string | null;
   accent?: Person["accent"];
   phone?: string | null;
 };
@@ -214,6 +218,7 @@ export function FriendsProvider({ children }: { children: ReactNode }) {
           status: item.status,
           lastSeenMinutes: item.last_seen_minutes || 0,
           lastSeenAt: item.last_seen_at ?? null,
+          avatarUrl: item.avatar_url ?? null,
           accent: item.accent || "teal",
           phone: item.phone
         }));
@@ -238,7 +243,7 @@ export function FriendsProvider({ children }: { children: ReactNode }) {
     const legacyProfile = readStored<Partial<Profile> | null>("profile", null);
     const { data: cloudProfile, error: profileError } = await supabase
       .from("users_directory")
-      .select("id,name,handle,phone")
+      .select("*")
       .eq("id", user.id)
       .maybeSingle();
 
@@ -249,6 +254,7 @@ export function FriendsProvider({ children }: { children: ReactNode }) {
         handle: cloudProfile.handle || "",
         bio: localProfile.id === user.id ? localProfile.bio : "",
         phone: cloudProfile.phone || user.email || "",
+        avatarUrl: (cloudProfile as { avatar_url?: string | null }).avatar_url ?? null,
       };
       setProfile(nextProfile);
       writeStored(key, nextProfile);
@@ -400,7 +406,7 @@ export function FriendsProvider({ children }: { children: ReactNode }) {
     void (async () => {
       const { data, error } = await supabase
         .from("users_directory")
-        .select("id,name,name_en,handle,role,role_en,status,accent")
+        .select("*")
         .in("id", missing);
       if (error || !data || data.length === 0) return;
       setDirectory((prev) => {
@@ -416,6 +422,8 @@ export function FriendsProvider({ children }: { children: ReactNode }) {
             roleEn: item.role_en,
             status: item.status,
             lastSeenMinutes: 0,
+            lastSeenAt: item.last_seen_at ?? null,
+            avatarUrl: item.avatar_url ?? null,
             accent: item.accent || "teal",
           })) as Person[];
         return added.length ? [...prev, ...added] : prev;
