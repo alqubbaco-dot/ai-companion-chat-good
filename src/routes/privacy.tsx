@@ -181,8 +181,8 @@ function PrivacyPage() {
             </p>
           </Section>
 
-          <Section title="7. الأطفال">
-            <p>التطبيق مو موجّه للأطفال تحت 13 سنة، وما نجمع بياناتهم عن قصد.</p>
+          <Section title="7. العمر">
+            <p>التطبيق مخصص لعمر 18 سنة وأكثر. ما نسمح لمن هو أصغر يستخدمه، وما نجمع بيانات الأطفال عن قصد. إذا عرفنا إن حساب يعود لشخص أصغر من 18، نحذفه.</p>
           </Section>
 
           <Section title="8. التغييرات على هذي السياسة">
@@ -264,8 +264,8 @@ function PrivacyPage() {
               we will delete the data within 30 days.
             </p>
             <p>
-              <b>Children:</b> the app is not directed to children under 13 and we do not knowingly collect their
-              data.
+              <b>Age:</b> the app is intended for users aged 18 and over. We do not knowingly collect data from
+              anyone younger, and we delete accounts we learn belong to someone under 18.
             </p>
             <p>
               <b>Contact:</b> {CONTACT}
