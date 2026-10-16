@@ -18,6 +18,7 @@ import {
   type PrivateMessage,
 } from "@/lib/private-chat";
 import { supabase } from "@/lib/supabase";
+import type { RealtimeChannel } from "@supabase/supabase-js";
 
 export const Route = createFileRoute("/private-chat/$conversationId")({
   component: PrivateChatPage,
@@ -169,6 +170,58 @@ function PrivateChatPage() {
     );
   };
 
+  // "يكتب الآن…" و"يسجّل صوت…": إشارات سريعة بقناة خاصة بالمحادثة (ما تنحفظ بقاعدة البيانات)
+  const activityChannel = useRef<RealtimeChannel | null>(null);
+  const lastActivitySent = useRef(0);
+  const activityTimer = useRef<number | undefined>(undefined);
+  const [otherActivity, setOtherActivity] = useState<null | "typing" | "recording">(null);
+
+  useEffect(() => {
+    if (!profile.id) return;
+    const channel = supabase.channel(`activity:${conversationId}`, {
+      config: { broadcast: { self: false } },
+    });
+    channel
+      .on("broadcast", { event: "activity" }, ({ payload }) => {
+        const data = payload as { from?: string; kind?: "typing" | "recording" | "stop" };
+        if (!data?.from || data.from === profile.id) return;
+        window.clearTimeout(activityTimer.current);
+        if (data.kind === "stop" || !data.kind) {
+          setOtherActivity(null);
+          return;
+        }
+        setOtherActivity(data.kind);
+        activityTimer.current = window.setTimeout(() => setOtherActivity(null), 4000);
+      })
+      .subscribe((status) => {
+        if (status === "SUBSCRIBED") activityChannel.current = channel;
+      });
+    return () => {
+      activityChannel.current = null;
+      window.clearTimeout(activityTimer.current);
+      setOtherActivity(null);
+      void supabase.removeChannel(channel);
+    };
+  }, [conversationId, profile.id]);
+
+  const sendActivity = useCallback(
+    (kind: "typing" | "recording" | "stop", force = false) => {
+      const channel = activityChannel.current;
+      if (!channel || !profile.id) return;
+      const now = Date.now();
+      if (!force && now - lastActivitySent.current < 2000) return;
+      lastActivitySent.current = kind === "stop" ? 0 : now;
+      void channel.send({ type: "broadcast", event: "activity", payload: { from: profile.id, kind } });
+    },
+    [profile.id],
+  );
+
+  // أول ما توصل رسالة من صديقك نشيل "يكتب…"
+  useEffect(() => {
+    const last = messages[messages.length - 1];
+    if (last && last.sender_id !== profile.id) setOtherActivity(null);
+  }, [messages, profile.id]);
+
   const addMessage = (message: PrivateMessage) =>
     setMessages((current) => current.some((item) => item.id === message.id) ? current : [...current, message]);
 
@@ -235,6 +288,7 @@ function PrivateChatPage() {
       const message = await sendPrivateMessage(conversationId, draft);
       addMessage(message);
       setDraft("");
+      sendActivity("stop", true);
       notifyOther(message);
     } catch (sendError) {
       setError(sendError instanceof Error ? sendError.message : "تعذر إرسال الرسالة");
@@ -242,6 +296,17 @@ function PrivateChatPage() {
       setSending(false);
     }
   };
+
+  // أثناء تسجيل رسالة صوتية نبلّغ صديقك كل ثانيتين
+  useEffect(() => {
+    if (!recorder.recording) return;
+    sendActivity("recording", true);
+    const timer = window.setInterval(() => sendActivity("recording", true), 2500);
+    return () => {
+      window.clearInterval(timer);
+      sendActivity("stop", true);
+    };
+  }, [recorder.recording, sendActivity]);
 
   const isOnline = otherUserId ? isOnlineNow(otherUserId) : false;
   const formatTime = (iso: string) =>
@@ -271,8 +336,14 @@ function PrivateChatPage() {
         </div>
         <div className="min-w-0 flex-1">
           <p className="truncate font-display text-[15px] font-extrabold leading-tight">{title}</p>
-          <p className={`truncate text-[11px] ${isOnline ? "text-emerald-600" : "text-muted-ink"}`}>
-            {isOnline ? "متصل الآن" : "غير متصل"}
+          <p className={`truncate text-[11px] ${otherActivity || isOnline ? "text-emerald-600" : "text-muted-ink"}`}>
+            {otherActivity === "typing"
+              ? "يكتب الآن…"
+              : otherActivity === "recording"
+                ? "يسجّل رسالة صوتية…"
+                : isOnline
+                  ? "متصل الآن"
+                  : "غير متصل"}
           </p>
         </div>
         {otherUserId ? (
@@ -379,7 +450,11 @@ function PrivateChatPage() {
             </button>
             <textarea
               value={draft}
-              onChange={(event) => setDraft(event.target.value)}
+              onChange={(event) => {
+                setDraft(event.target.value);
+                if (event.target.value.trim()) sendActivity("typing");
+                else sendActivity("stop", true);
+              }}
               onKeyDown={(event) => {
                 if (event.key === "Enter" && !event.shiftKey) {
                   event.preventDefault();
