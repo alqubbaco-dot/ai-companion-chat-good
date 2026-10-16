@@ -25,13 +25,13 @@ export function ChatView({ chatId }: { chatId?: string }) {
   }, [messages.length, lastMessage?.content]);
 
   // تحديث دالة الاستقبال لتلتقط نص الرسالة ومعيار الفكاهة (isFunny) وتمريرهما معاً
-  const handleSend = (text: string, isFunny: boolean) => {
+  const handleSend = (text: string, isFunny: boolean, character?: string) => {
     if (chatId && conversation) {
-      sendMessage(chatId, text, isFunny);
+      sendMessage(chatId, text, isFunny, character);
       return;
     }
     const created = createConversation();
-    sendMessage(created.id, text, isFunny);
+    sendMessage(created.id, text, isFunny, character);
     navigate({ to: "/chat/\$chatId", params: { chatId: created.id } });
   };
 

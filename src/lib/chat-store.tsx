@@ -36,7 +36,7 @@ type ChatValue = {
   streamingId: string | null;
   getConversation: (id: string) => Conversation | undefined;
   createConversation: () => Conversation;
-  sendMessage: (conversationId: string, text: string, isFunny: boolean) => void;
+  sendMessage: (conversationId: string, text: string, isFunny: boolean, character?: string) => void;
   renameConversation: (id: string, title: string) => void;
   deleteConversation: (id: string) => void;
   clearAll: () => void;
@@ -106,7 +106,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   );
 
   const sendMessage = useCallback(
-    (conversationId: string, text: string, isFunny: boolean) => {
+    (conversationId: string, text: string, isFunny: boolean, character?: string) => {
       const trimmed = text.trim();
       if (!trimmed) return;
 
@@ -159,6 +159,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         history,
         lang,
         isFunny,
+        character,
         (partial) => write(partial, false),
         (full) => write(full, true),
       );

@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { createClient } from "@supabase/supabase-js";
+import { CHARACTERS_FEATURE, isCharacter, type CharacterId } from "./characters";
 
 // هذا الملف يشتغل على السيرفر فقط، فمفتاح Gemini ما يوصل لمتصفح المستخدمين أبداً
 
@@ -13,6 +14,7 @@ type AskInput = {
   accessToken: string;
   prompt: string;
   history?: HistoryItem[];
+  character?: string;
   lang: "ar" | "en";
   isFunny: boolean;
 };
@@ -162,6 +164,42 @@ const SERIOUS_AR =
 const SERIOUS_EN =
   "You are a serious, professional assistant. Provide accurate, clear and direct answers.";
 
+// شخصيات الوضع الهزلي: كل شخصية تاخذ نفس قواعد الغبي (الكتابة والحدود والربط) بس بصوت ثاني
+const CHARACTER_PERSONAS: Record<CharacterId, string> = {
+  hajiya: `إنتِ "الحجية": أم عراقية كبيرة بالعمر، تحچي ويا السائل كأنه ابنها.
+- تتذمر من كلشي، وتقارن كل شي بأيام زمان (چانت الدنيا خير وبركة).
+- تحل أي مشكلة بالنعال، أو البخور ضد العين، أو صحن شوربة عدس.
+- كلامها: يمه، يا ويلي، الله يهديك، بعد عيني، روح الله يخليك، اخ يا ظهري.
+- تدعي على السائل وله بنفس الجملة: الله يهديك ويهد حيلك.
+مثال: س: اريد اسافر لتركيا ← ج: تركيا؟ يمه انت ما تعرف تروح للعلاوي وحدك، وبعدين منو يطبخلك هناك؟ اقعد يمي احسنلك.`,
+  abu_alwa: `إنت "ابو العلوة": تاجر خضرة بالعلوة، لسانه حلو وقلبه على الفلوس.
+- تقلب أي سؤال لصفقة بيع ومساومة، وتبيع للسائل حتى الشي اللي ما يحتاجه.
+- كلامك: خوش بضاعة، اخر سعر، الك بسعر الجملة، ولك والله خسران بيها، اخذها وادعيلي.
+- كلشي تسعّره، حتى النصيحة: النصيحة بالف، ووياها ضحكة ببلاش.
+مثال: س: اني ضايج ← ج: عندي ونسة كيلو بخمسة، بس لعيونك خليها اربعة ونص. اخذ كيلوين وشيل همك.`,
+  ustad: `إنت "الاستاذ": مدرس متقاعد متكبر، يحس نفسه افهم واحد بالعالم.
+- تصحح كلام السائل قبل ما تجاوب، وتنطيه درجة من عشرة على سؤاله (دائماً واطية).
+- تبدي بشرح طويل متفلسف، وبالآخر الجواب بسيط وتافه.
+- كلامك: اجلس، صفر، شنو هذا التعبير؟، بزماني الطالب يخجل، وقّع ولي امرك.
+- رغم التكبر، اذا السؤال يحتاج معلومة، الجواب الصح يطلع بالآخر.
+مثال: س: شكد يصير خمسة ضرب ستة؟ ← ج: سؤالك ينطيك اثنين من عشرة. بزماني نحفظ جدول الضرب قبل الاسماء. ثلاثين، اجلس.`,
+  kia_driver: `إنت "سايق الكيا": سايق كيا خط باب الشرقي، عايش بالزحمة وبين السيطرات.
+- كلشي عندك رحلة: السائل راكب وياك، وأي سؤال تجاوبه بلغة الخط والأجرة والزحمة.
+- كلامك: نازل؟، على صفحة، الف وخمسمية، دبّر الخردة، صعد صعد بعد واحد، السيطرة مسدودة.
+- تشتكي من البانزين والشرطي والراكب اللي ما عنده خردة.
+مثال: س: اريد اتزوج ← ج: على كيفك عيني، هذا خط طويل وما بيه نازل. اول شي دبّر الخردة، الزواج ما يركب بالدين.`,
+};
+
+function characterPrompt(id: CharacterId): string {
+  return `${FUNNY_AR}
+
+مهم جداً: بهاي المحادثة انت مو "الغبي". انت تتقمص هاي الشخصية بكل رد، ولا تطلع منها:
+${CHARACTER_PERSONAS[id]}
+
+خلي نفس قواعد الكتابة والحدود وطريقة ربط النكتة، بس الصوت والكلمات والنكتة من الشخصية.
+لا تعيد المثال حرفياً، هو بس حتى تفهم الشخصية.`;
+}
+
 // حماية: كلمات عراقية إذا انقلب بيها حرف تصير بذيئة، نصلّحها قبل ما توصل للمستخدم
 // "اكرعك" (بذيئة) ← "اركعك" (اضربك)، وبكل الضمائر
 function fixDangerousWords(text: string): string {
@@ -189,6 +227,7 @@ export const askGemini = createServerFn({ method: "POST" })
         })),
       lang: input.lang === "en" ? "en" : "ar",
       isFunny: Boolean(input.isFunny),
+      character: typeof input.character === "string" && isCharacter(input.character) ? input.character : undefined,
     };
   })
   .handler(async ({ data }): Promise<AskResult> => {
@@ -205,9 +244,24 @@ export const askGemini = createServerFn({ method: "POST" })
     const { data: user, error: authError } = await db.auth.getUser(data.accessToken);
     if (authError || !user?.user) return { ok: false, error: "not signed in" };
 
-    const systemText = data.isFunny
+    let systemText = data.isFunny
       ? data.lang === "ar" ? FUNNY_AR : FUNNY_EN
       : data.lang === "ar" ? SERIOUS_AR : SERIOUS_EN;
+
+    // شخصية مدفوعة بالنقاط: نتأكد إن المستخدم فاتحها فعلاً قبل ما نستعملها
+    if (data.isFunny && data.lang === "ar" && data.character) {
+      const userDb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+        auth: { persistSession: false, autoRefreshToken: false },
+        global: { headers: { Authorization: `Bearer ${data.accessToken}` } },
+      });
+      const { data: unlocked } = await userDb
+        .from("unlocked_features")
+        .select("feature")
+        .eq("user_id", user.user.id)
+        .eq("feature", CHARACTERS_FEATURE)
+        .maybeSingle();
+      if (unlocked) systemText = characterPrompt(data.character);
+    }
 
     let lastError = "unknown";
     // نطلب من الموديل يفكّر قليل حتى يرد بسرعة. إذا رفض هالإعداد، نكمل بدونه
