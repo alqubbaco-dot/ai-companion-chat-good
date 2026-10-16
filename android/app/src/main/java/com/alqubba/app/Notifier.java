@@ -27,7 +27,9 @@ import java.util.Map;
 /** كل شي يخص إشعارات المكالمات والرسائل */
 final class Notifier {
 
-    static final String CH_CALLS = "calls_v1";
+    // قناة المكالمات: وحدة لكل نغمة، لأن أندرويد ما يسمح نغيّر صوت القناة بعد ما تنسوي
+    static final String CH_CALLS_PREFIX = "calls_ring_";
+    static final String CH_CALLS_OLD = "calls_v1";
     static final String CH_MESSAGES = "messages_v1";
     static final String EXTRA_CALL_ID = "callId";
     static final String EXTRA_FROM = "from";
@@ -43,14 +45,34 @@ final class Notifier {
         return tag == null ? 1 : (tag.hashCode() & 0x7fffffff);
     }
 
+    /** رابط ملف النغمة المختارة داخل التطبيق (أو رنين التلفون إذا صار خلل) */
+    static Uri ringtoneUri(Context c) {
+        int res = c.getResources().getIdentifier("ring_" + Prefs.getRingtone(c), "raw", c.getPackageName());
+        if (res == 0) return RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE);
+        return Uri.parse("android.resource://" + c.getPackageName() + "/" + res);
+    }
+
+    static String callsChannel(Context c) {
+        return CH_CALLS_PREFIX + Prefs.getRingtone(c);
+    }
+
     static void ensureChannels(Context c) {
         if (Build.VERSION.SDK_INT < 26) return;
         NotificationManager nm = c.getSystemService(NotificationManager.class);
         if (nm == null) return;
 
-        NotificationChannel calls = new NotificationChannel(CH_CALLS, "المكالمات", NotificationManager.IMPORTANCE_HIGH);
+        // نمسح قنوات المكالمات القديمة (النغمات اللي ما مختارة) حتى ما تتكرر بإعدادات التلفون
+        String current = callsChannel(c);
+        for (NotificationChannel ch : nm.getNotificationChannels()) {
+            String id = ch.getId();
+            if ((id.startsWith(CH_CALLS_PREFIX) || id.equals(CH_CALLS_OLD)) && !id.equals(current)) {
+                nm.deleteNotificationChannel(id);
+            }
+        }
+
+        NotificationChannel calls = new NotificationChannel(current, "المكالمات", NotificationManager.IMPORTANCE_HIGH);
         calls.setDescription("رنين المكالمات الواردة");
-        calls.setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE),
+        calls.setSound(ringtoneUri(c),
                 new AudioAttributes.Builder()
                         .setUsage(AudioAttributes.USAGE_NOTIFICATION_RINGTONE)
                         .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
@@ -112,7 +134,7 @@ final class Notifier {
                 .putExtra(EXTRA_TAG, tag);
         PendingIntent declinePi = PendingIntent.getBroadcast(c, id + 2, decline, piFlags());
 
-        NotificationCompat.Builder b = new NotificationCompat.Builder(c, CH_CALLS)
+        NotificationCompat.Builder b = new NotificationCompat.Builder(c, callsChannel(c))
                 .setSmallIcon(R.drawable.ic_stat_call)
                 .setContentTitle(title)
                 .setContentText(video ? "مكالمة فيديو واردة" : (d.get("body") != null ? d.get("body") : "مكالمة صوتية واردة"))
@@ -124,7 +146,7 @@ final class Notifier {
                 .setTimeoutAfter(Config.RING_TIMEOUT_MS)
                 .setContentIntent(fullPi)
                 .setFullScreenIntent(fullPi, true)
-                .setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE), AudioManager.STREAM_RING)
+                .setSound(ringtoneUri(c), AudioManager.STREAM_RING)
                 .setVibrate(new long[]{0, 800, 400, 800, 400, 800})
                 .addAction(0, "❌ رفض", declinePi)
                 .addAction(0, "✅ رد", acceptPi);

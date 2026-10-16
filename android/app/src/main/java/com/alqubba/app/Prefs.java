@@ -65,6 +65,24 @@ final class Prefs {
         sp(c).edit().putInt("skipped_version", v).apply();
     }
 
+    // نغمة رنين المكالمات (من نغمات القبة بمجلد res/raw)
+    static final String[] RINGTONES = {"qubba", "bayati", "hijaz", "darbuka", "marimba", "news", "kia", "calm"};
+
+    static boolean isRingtone(String id) {
+        if (id == null) return false;
+        for (String r : RINGTONES) if (r.equals(id)) return true;
+        return false;
+    }
+
+    static String getRingtone(Context c) {
+        String id = sp(c).getString("ringtone", "qubba");
+        return isRingtone(id) ? id : "qubba";
+    }
+
+    static void setRingtone(Context c, String id) {
+        if (isRingtone(id)) sp(c).edit().putString("ringtone", id).apply();
+    }
+
     private Prefs() {
     }
 }

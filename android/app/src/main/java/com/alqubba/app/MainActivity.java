@@ -346,6 +346,17 @@ public class MainActivity extends Activity {
 
         /** فتح شاشة تجهيز التلفون (من صفحة الإعدادات) */
         @JavascriptInterface
+        public String getRingtone() {
+            return Prefs.getRingtone(MainActivity.this);
+        }
+
+        @JavascriptInterface
+        public void setRingtone(String id) {
+            Prefs.setRingtone(MainActivity.this, id);
+            Notifier.ensureChannels(MainActivity.this);
+        }
+
+        @JavascriptInterface
         public void openSetup() {
             runOnUiThread(() -> startActivity(new Intent(MainActivity.this, SetupActivity.class)));
         }

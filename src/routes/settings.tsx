@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { RingtonePicker } from "@/components/app/RingtonePicker";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { PageBody } from "@/components/app/AppShell";
@@ -82,6 +83,8 @@ function SettingsPage() {
             <span className="text-muted-ink">←</span>
           </button>
         ) : null}
+
+        <RingtonePicker />
 
         {/* 1. قسم اللغة */}
         <section className="rounded-3xl border-2 border-line bg-cream p-5">
