@@ -19,6 +19,7 @@ import {
   type PrivateMessage,
 } from "@/lib/private-chat";
 import { supabase } from "@/lib/supabase";
+import { PersonPhoto } from "@/components/app/Avatar";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 
 export const Route = createFileRoute("/private-chat/$conversationId")({
@@ -367,9 +368,7 @@ function PrivateChatPage() {
           <span className="ltr:-scale-x-100">→</span>
         </Link>
         <div className="relative shrink-0">
-          <div className="grid size-10 place-items-center rounded-full bg-teal/20 font-display font-bold">
-            {title.charAt(0)}
-          </div>
+          <PersonPhoto src={otherUser?.avatarUrl} name={title} className="size-10" fallbackClassName="bg-teal/20" />
           {otherUserId ? (
             <span
               className={`absolute -bottom-0.5 -start-0.5 size-3 rounded-full ring-2 ring-cream ${isOnline ? "bg-emerald-500" : "bg-red-300"}`}

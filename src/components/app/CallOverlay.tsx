@@ -1,5 +1,7 @@
 import { useEffect, useRef, type ReactNode } from "react";
 import { useCall } from "@/lib/call-store";
+import { useFriends } from "@/lib/friends-store";
+import { PersonPhoto } from "@/components/app/Avatar";
 
 function formatDuration(total: number) {
   const m = Math.floor(total / 60);
@@ -91,6 +93,8 @@ export function CallOverlay() {
     toggleCamera,
     switchCamera,
   } = useCall();
+  const { directory } = useFriends();
+  const peerAvatar = call ? directory.find((p) => p.id === call.peerId)?.avatarUrl : null;
 
   const visible = phase !== "idle" && call;
   const isVideo = Boolean(call?.video);
@@ -151,9 +155,12 @@ export function CallOverlay() {
                 {phase === "incoming" || phase === "outgoing" ? (
                   <span className="absolute inset-0 animate-ping rounded-full bg-white/20" />
                 ) : null}
-                <div className="relative grid size-28 place-items-center rounded-full bg-white/15 font-display text-5xl font-bold ring-4 ring-white/20">
-                  {call.peerName.charAt(0)}
-                </div>
+                <PersonPhoto
+                  src={peerAvatar}
+                  name={call.peerName}
+                  className="relative size-28 text-5xl ring-4 ring-white/20"
+                  fallbackClassName="bg-white/15"
+                />
               </div>
             ) : null}
             <p className={`font-display font-extrabold ${showRemoteVideo ? "text-lg" : "text-2xl"}`}>{call.peerName}</p>

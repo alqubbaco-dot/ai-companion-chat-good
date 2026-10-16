@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { PageBody } from "@/components/app/AppShell";
 import { Avatar } from "@/components/app/Avatar";
@@ -6,9 +6,11 @@ import { useChatStore } from "@/lib/chat-store";
 import { useI18n } from "@/lib/i18n";
 import { supabase as cloudClient } from "@/lib/supabase";
 import { toast } from "sonner";
+import { Camera } from "lucide-react";
 import { useFriends } from "@/lib/friends-store";
 import { friendlyDbError, getMyPhone, saveMyProfile, shareInvite } from "@/lib/cloud-friends";
 import { deleteMyChatMedia } from "@/lib/private-chat";
+import { deleteAllMyAvatars, removeMyAvatar, uploadMyAvatar } from "@/lib/avatar";
 
 export const Route = createFileRoute("/account")({
   head: () => ({
@@ -29,7 +31,41 @@ function AccountPage() {
   const [nameDraft, setNameDraft] = useState("");
   const [phone, setPhone] = useState("");
   const [phoneDraft, setPhoneDraft] = useState("");
-  const { refreshProfile, resetAll } = useFriends();
+  const { refreshProfile, resetAll, profile } = useFriends();
+  const photoInputRef = useRef<HTMLInputElement>(null);
+  const [photoBusy, setPhotoBusy] = useState(false);
+
+  // الصورة الشخصية (تحتاج supabase/avatars.sql)
+  const handlePickPhoto = async (file?: File) => {
+    if (!file || photoBusy) return;
+    setPhotoBusy(true);
+    try {
+      await uploadMyAvatar(file);
+      await refreshProfile();
+      toast.success("📸 تغيّرت صورتك");
+    } catch (err) {
+      console.error("تعذر رفع الصورة:", err);
+      toast.error("ما گدرنا نرفع الصورة، جرّب صورة ثانية أو بعد شوية");
+    } finally {
+      setPhotoBusy(false);
+      if (photoInputRef.current) photoInputRef.current.value = "";
+    }
+  };
+
+  const handleRemovePhoto = async () => {
+    if (photoBusy) return;
+    setPhotoBusy(true);
+    try {
+      await removeMyAvatar();
+      await refreshProfile();
+      toast.success("انشالت الصورة");
+    } catch (err) {
+      console.error("تعذر حذف الصورة:", err);
+      toast.error("ما گدرنا نشيل الصورة هسه");
+    } finally {
+      setPhotoBusy(false);
+    }
+  };
   const [deleteStep, setDeleteStep] = useState<0 | 1>(0);
   const [deleteWord, setDeleteWord] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);
@@ -42,6 +78,7 @@ function AccountPage() {
       // الصور والرسائل الصوتية ما تنحذف تلقائياً ويه الحساب، فنمسحها أول
       const myId = (await cloudClient.auth.getUser()).data.user?.id;
       if (myId) await deleteMyChatMedia(myId).catch((e) => console.error("تعذر حذف الوسائط:", e));
+      await deleteAllMyAvatars().catch((e) => console.error("تعذر حذف الصورة الشخصية:", e));
       const { error } = await cloudClient.rpc("delete_my_account");
       if (error) throw error;
       clearAll();
@@ -142,7 +179,43 @@ function AccountPage() {
     <PageBody title={t("accountTitle") || "حسابي"} subtitle={t("accountSubtitle") || "بياناتك محفوظة بأمان سحابي."}>
       <div className="mx-auto w-full max-w-md space-y-6 py-4 animate-rise text-right" dir="rtl">
         <div className="rounded-3xl border-2 border-line bg-cream p-6 text-center space-y-4">
-          <Avatar name={account.name || account.email || account.id} size="lg" className="mx-auto" />
+          <div className="relative mx-auto w-fit">
+            <button
+              type="button"
+              onClick={() => photoInputRef.current?.click()}
+              disabled={photoBusy}
+              className="block rounded-full transition-transform active:scale-95"
+              aria-label="تغيير الصورة الشخصية"
+              title="تغيير الصورة الشخصية"
+            >
+              <Avatar
+                name={account.name || account.email || account.id}
+                src={profile.avatarUrl}
+                size="xl"
+                className={photoBusy ? "animate-pulse opacity-60" : ""}
+              />
+              <span className="absolute -bottom-1 -end-1 grid size-9 place-items-center rounded-full border-2 border-cream bg-emerald-500 text-white shadow">
+                <Camera className="size-[18px]" strokeWidth={2} />
+              </span>
+            </button>
+            <input
+              ref={photoInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(event) => void handlePickPhoto(event.target.files?.[0])}
+            />
+          </div>
+          <div className="flex justify-center gap-4 text-xs font-bold">
+            <button type="button" onClick={() => photoInputRef.current?.click()} disabled={photoBusy} className="text-emerald-600">
+              {photoBusy ? "لحظة…" : profile.avatarUrl ? "تغيير الصورة" : "أضف صورة"}
+            </button>
+            {profile.avatarUrl ? (
+              <button type="button" onClick={() => void handleRemovePhoto()} disabled={photoBusy} className="text-red-500">
+                إزالة الصورة
+              </button>
+            ) : null}
+          </div>
           <div>
             <h2 className="font-display text-base font-extrabold text-ink break-all">{account.name || account.email || account.id}</h2>
             {account.handle && <p className="text-xs font-mono text-muted-ink mt-0.5">{account.handle}</p>}

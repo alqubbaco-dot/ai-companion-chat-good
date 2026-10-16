@@ -122,7 +122,7 @@ export function Sidebar() {
           to="/account"
           className="flex animate-pop items-center gap-3 rounded-2xl border-2 border-line bg-cream p-3 transition-colors hover:bg-ink/5"
         >
-          <Avatar name={profile.name} />
+          <Avatar name={profile.name} src={profile.avatarUrl} />
           <div className="min-w-0">
             <p className="truncate text-sm font-semibold">{profile.name}</p>
             <p className="truncate text-[11px] text-muted-ink">{profile.handle}</p>
