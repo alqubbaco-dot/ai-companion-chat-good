@@ -7,9 +7,9 @@ import { useI18n } from "@/lib/i18n";
 export const Route = createFileRoute("/requests")({
   head: () => ({
     meta: [
-      { title: "طلبات الصداقة — الغباء الصناعي" },
+      { title: "طلبات الصداقة — القبة" },
       { name: "description", content: "اقبل أو ارفض طلبات الصداقة الواردة وتابع طلباتك المرسلة." },
-      { property: "og:title", content: "طلبات الصداقة — الغباء الصناعي" },
+      { property: "og:title", content: "طلبات الصداقة — القبة" },
       {
         property: "og:description",
         content: "اقبل أو ارفض طلبات الصداقة الواردة وتابع طلباتك المرسلة.",

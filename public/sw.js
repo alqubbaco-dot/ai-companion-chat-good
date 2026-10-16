@@ -1,4 +1,4 @@
-// عامل الخدمة لتطبيق "الغباء الصناعي"
+// عامل الخدمة لتطبيق "القبة"
 // - يحفظ صفحة "بدون نت" والأيقونات حتى تشتغل حتى لو انقطع الاتصال
 // - الصفحات: من النت أولاً، وإذا ماكو نت تطلع صفحة "بدون نت"
 // - الملفات الثابتة (JS/CSS/صور): من الذاكرة فوراً، وتتحدّث بالخلفية
@@ -98,7 +98,7 @@ self.addEventListener("push", (event) => {
   try {
     data = event.data ? event.data.json() : {};
   } catch {
-    data = { title: "الغباء الصناعي", body: event.data ? event.data.text() : "" };
+    data = { title: "القبة", body: event.data ? event.data.text() : "" };
   }
 
   event.waitUntil(
@@ -126,7 +126,7 @@ self.addEventListener("push", (event) => {
       if (appVisible) return;
 
       const isCall = data.kind === "call";
-      await self.registration.showNotification(data.title || "الغباء الصناعي", {
+      await self.registration.showNotification(data.title || "القبة", {
         body: data.body || "",
         tag: data.tag || undefined,
         renotify: true,

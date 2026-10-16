@@ -66,7 +66,7 @@ export function PwaManager() {
     navigator.serviceWorker.addEventListener("controllerchange", onControllerChange);
 
     const askToUpdate = (worker: ServiceWorker) => {
-      toast("✨ أكو نسخة جديدة من الغباء الصناعي", {
+      toast("✨ أكو نسخة جديدة من القبة", {
         duration: Infinity,
         action: {
           label: "حدّث",
@@ -123,7 +123,7 @@ export function PwaManager() {
     const onInstalled = () => {
       setInstallEvent(null);
       setHidden(true);
-      toast.success("🎉 انتصب الغباء الصناعي على جهازك!");
+      toast.success("🎉 انتصبت القبة على جهازك!");
     };
     window.addEventListener("beforeinstallprompt", onBeforeInstall);
     window.addEventListener("appinstalled", onInstalled);
@@ -176,7 +176,7 @@ export function PwaManager() {
           draggable={false}
         />
         <div className="min-w-0 flex-1">
-          <p className="font-display text-sm font-extrabold leading-tight">ثبّت الغباء الصناعي 📲</p>
+          <p className="font-display text-sm font-extrabold leading-tight">ثبّت القبة 📲</p>
           {showIosHint && !installEvent ? (
             <p className="mt-0.5 text-[11.5px] leading-snug text-muted-ink">
               اضغط زر المشاركة <span aria-hidden>⬆️</span> بالأسفل، وبعدين «إضافة إلى الشاشة الرئيسية».

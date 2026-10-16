@@ -35,8 +35,8 @@ export function streamSimulatedReply(
         console.error("AI Error:", result.error);
         onDone(
           lang === "ar"
-            ? "⚠️ الغباء الصناعي نايم هسه 😴 جرب ترسل الرسالة مرة ثانية بعد شوية."
-            : "⚠️ Artificial Stupidity is napping 😴 Try again in a moment.",
+            ? "⚠️ الغبي نايم هسه 😴 جرب ترسل الرسالة مرة ثانية بعد شوية."
+            : "⚠️ Ghabiy is napping 😴 Try again in a moment.",
         );
         return;
       }
@@ -62,8 +62,8 @@ export function streamSimulatedReply(
       if (cancelled) return;
       onDone(
         lang === "ar"
-          ? "⚠️ الغباء الصناعي غفى بنص الجواب 😴 جرب ترسل الرسالة مرة ثانية."
-          : "⚠️ Artificial Stupidity dozed off mid-reply 😴 Try again.",
+          ? "⚠️ الغبي غفى بنص الجواب 😴 جرب ترسل الرسالة مرة ثانية."
+          : "⚠️ Ghabiy dozed off mid-reply 😴 Try again.",
       );
     }
   };

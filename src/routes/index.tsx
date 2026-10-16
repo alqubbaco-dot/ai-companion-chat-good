@@ -4,12 +4,12 @@ import { ChatView } from "@/components/chat/ChatView";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "محادثة جديدة — الغباء الصناعي" },
+      { title: "محادثة جديدة — القبة" },
       {
         name: "description",
         content: "ابدأ محادثة جديدة مع المساعد الذكي: ردود فورية، تنسيق كود، نسخ ومشاركة.",
       },
-      { property: "og:title", content: "محادثة جديدة — الغباء الصناعي" },
+      { property: "og:title", content: "محادثة جديدة — القبة" },
       {
         property: "og:description",
         content: "ابدأ محادثة جديدة مع المساعد الذكي: ردود فورية، تنسيق كود، نسخ ومشاركة.",

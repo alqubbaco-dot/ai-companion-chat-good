@@ -13,12 +13,12 @@ export const Route = createFileRoute("/chats")({
   },
   head: () => ({
     meta: [
-      { title: "محادثاتي — الغباء الصناعي" },
+      { title: "محادثاتي — القبة" },
       {
         name: "description",
         content: "كل محادثاتك في مكان واحد: بحث، إعادة تسمية، حذف ومتابعة.",
       },
-      { property: "og:title", content: "محادثاتي — الغباء الصناعي" },
+      { property: "og:title", content: "محادثاتي — القبة" },
       {
         property: "og:description",
         content: "كل محادثاتك في مكان واحد: بحث، إعادة تسمية، حذف ومتابعة.",

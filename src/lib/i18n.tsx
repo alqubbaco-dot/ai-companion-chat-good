@@ -13,7 +13,7 @@ export type Lang = "ar" | "en";
 
 const dict = {
   ar: {
-    appName: "الغباء الصناعي",
+    appName: "القبة",
     appTagline: "مصنع الغباء البشري، يُدار بذكاء اصطناعي.",
     navNewChat: "محادثة جديدة",
     navChats: "محادثاتي",
@@ -101,7 +101,7 @@ const dict = {
     deleteChatConfirm: "هل تريد حذف هذه المحادثة؟",
   },
   en: {
-    appName: "ChatGhabiy",
+    appName: "Qubba Chat",
     appTagline: "A human-stupidity factory, run by artificial intelligence.",
     navNewChat: "New chat",
     navChats: "My chats",

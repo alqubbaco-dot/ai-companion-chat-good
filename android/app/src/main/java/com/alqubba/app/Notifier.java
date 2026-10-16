@@ -1,4 +1,4 @@
-package com.ghabiy.app;
+package com.alqubba.app;
 
 import android.app.Notification;
 import android.app.NotificationChannel;

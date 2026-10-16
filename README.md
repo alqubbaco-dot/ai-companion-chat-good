@@ -1,6 +1,6 @@
 # AI Companion Chat
 
-Please build a complete Chat Web Application named "الغباء الصناعي" (ChatGhabiy). This focusing on the AI Chat engine and the Social/Friends features.
+Please build a complete Chat Web Application named "القبة" (Qubba Chat). This focusing on the AI Chat engine and the Social/Friends features.
 
 Requirements to implement:
 

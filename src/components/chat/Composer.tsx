@@ -13,7 +13,7 @@ export function Composer({
 }) {
   const { t } = useI18n();
   const [value, setValue] = useState("");
-  const [isFunny, setIsFunny] = useState(true); // تفعيل وضع "الغباء الصناعي الهزلي" افتراضياً ليعكس هوية التطبيق الساخرة
+  const [isFunny, setIsFunny] = useState(true); // تفعيل الوضع الهزلي افتراضياً ليعكس هوية التطبيق الساخرة
   const ref = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {

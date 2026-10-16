@@ -88,9 +88,9 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "theme-color", content: "#14106f" },
       { name: "mobile-web-app-capable", content: "yes" },
       { name: "apple-mobile-web-app-capable", content: "yes" },
-      { name: "apple-mobile-web-app-title", content: "الغباء الصناعي" },
+      { name: "apple-mobile-web-app-title", content: "القبة" },
       { name: "apple-mobile-web-app-status-bar-style", content: "default" },
-      { title: "الغباء الصناعي" },
+      { title: "القبة" },
       {
         name: "description",
         content: "مساعد دردشة ذكي مع نظام أصدقاء، بالعربية والإنجليزية، فاتح وداكن.",
@@ -160,7 +160,7 @@ function CloudSecurityGateway({ children }: { children: ReactNode }) {
       <div className="flex min-h-dvh flex-col items-center justify-center gap-3 bg-paper">
         <img
           src="/icons/logo.webp"
-          alt="الغباء الصناعي"
+          alt="القبة"
           width={80}
           height={80}
           className="size-20 animate-pulse rounded-[30%] shadow-lg"

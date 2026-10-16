@@ -5,8 +5,8 @@ import { createFileRoute } from "@tanstack/react-router";
 export const Route = createFileRoute("/privacy")({
   head: () => ({
     meta: [
-      { title: "سياسة الخصوصية — الغباء الصناعي" },
-      { name: "description", content: "سياسة الخصوصية لتطبيق الغباء الصناعي: شنو البيانات اللي نجمعها وليش وشلون نحميها." },
+      { title: "سياسة الخصوصية — القبة" },
+      { name: "description", content: "سياسة الخصوصية لتطبيق القبة: شنو البيانات اللي نجمعها وليش وشلون نحميها." },
     ],
   }),
   component: PrivacyPage,
@@ -34,12 +34,12 @@ function PrivacyPage() {
             <img src="/icons/icon-192.png" alt="" width={48} height={48} className="size-12 rounded-2xl" />
             <h1 className="font-display text-3xl font-extrabold">سياسة الخصوصية</h1>
           </div>
-          <p className="text-sm text-muted-ink">تطبيق «الغباء الصناعي» — آخر تحديث: {UPDATED}</p>
+          <p className="text-sm text-muted-ink">تطبيق «القبة» — آخر تحديث: {UPDATED}</p>
         </header>
 
         <div dir="rtl" className="space-y-7">
           <p className="text-[15px] leading-7">
-            هذي الصفحة توضّح شنو المعلومات اللي يجمعها تطبيق «الغباء الصناعي» (الموقع وتطبيق الأندرويد)، وليش
+            هذي الصفحة توضّح شنو المعلومات اللي يجمعها تطبيق «القبة» (الموقع وتطبيق الأندرويد)، وليش
             نحتاجها، وشلون نحميها، وشنو حقوقك. باستخدامك للتطبيق إنت توافق على هذي السياسة.
           </p>
 
@@ -91,7 +91,7 @@ function PrivacyPage() {
               <li>نرسل أرقام جهات الاتصال للسيرفر بشكل مشفّر (HTTPS) <b>للمطابقة بس</b>، و<b>ما نحفظها</b>.</li>
               <li>أسماء جهات الاتصال <b>ما تطلع من تلفونك</b> أبداً، تنعرض عندك بس.</li>
               <li>ما نرسل أي رسالة أو دعوة لجهات اتصالك، وما نشاركها ويا أي أحد.</li>
-              <li>تكدر تسحب الإذن بأي وقت من: إعدادات التلفون ← التطبيقات ← الغباء الصناعي ← الأذونات.</li>
+              <li>تكدر تسحب الإذن بأي وقت من: إعدادات التلفون ← التطبيقات ← القبة ← الأذونات.</li>
             </ul>
           </Section>
 
@@ -176,7 +176,7 @@ function PrivacyPage() {
         {/* English version */}
         <div dir="ltr" lang="en" className="space-y-5 border-t-2 border-line pt-8 text-left">
           <h2 className="font-display text-2xl font-extrabold">Privacy Policy (English)</h2>
-          <p className="text-sm text-muted-ink">"Artificial Stupidity" (الغباء الصناعي) — Last updated: {UPDATED_EN}</p>
+          <p className="text-sm text-muted-ink">"Qubba Chat" (القبة) — Last updated: {UPDATED_EN}</p>
           <div className="space-y-3 text-[15px] leading-7 text-ink/85">
             <p>
               <b>Data we collect:</b> your phone number (for sign-in and friend search), profile details you enter

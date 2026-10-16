@@ -69,10 +69,10 @@ export function inviteLink(userId: string): string {
 /** مشاركة رابط الدعوة (واتساب وغيره)، وإذا ما يدعم المشاركة ننسخه */
 export async function shareInvite(userId: string, myName: string): Promise<"shared" | "copied" | "failed"> {
   const url = inviteLink(userId);
-  const text = `${myName ? myName + " يدعوك" : "تعال"} لتطبيق الغباء الصناعي 🤪 نسولف ونضحك سوية:`;
+  const text = `${myName ? myName + " يدعوك" : "تعال"} لتطبيق القبة 🤪 نسولف ونضحك سوية:`;
   if (typeof navigator !== "undefined" && "share" in navigator) {
     try {
-      await navigator.share({ title: "الغباء الصناعي", text, url });
+      await navigator.share({ title: "القبة", text, url });
       return "shared";
     } catch {
       /* المستخدم سكّر نافذة المشاركة: نجرب النسخ */

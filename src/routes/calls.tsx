@@ -19,7 +19,7 @@ import {
 export const Route = createFileRoute("/calls")({
   head: () => ({
     meta: [
-      { title: "سجل المكالمات — الغباء الصناعي" },
+      { title: "سجل المكالمات — القبة" },
       { name: "description", content: "مكالماتك الصادرة والواردة والفائتة." },
     ],
   }),

@@ -13,7 +13,7 @@ import { deleteMyChatMedia } from "@/lib/private-chat";
 export const Route = createFileRoute("/account")({
   head: () => ({
     meta: [
-      { title: "حسابي — الغباء الصناعي" },
+      { title: "حسابي — القبة" },
       { name: "description", content: "إدارة ملفك الشخصي ومزامنة سجلاتك السحابية بأمان." },
     ],
   }),

@@ -54,19 +54,19 @@ jobs:
           msg=$(grep -E "error:|What went wrong|e: |Could not|FAILED|failed" -A4 build.log | grep -v "^--$" | head -70 | sed -e 's/%/%25/g' -e 's/\r//g' | sed ':a;N;$!ba;s/\n/%0A/g')
           echo "::error title=Gradle build failed::${msg}"
 
-      # ghabiy.apk = للتنصيب المباشر (يحدّث نفسه)، ghabiy-play.aab = للرفع على Google Play
+      # qubba.apk = للتنصيب المباشر (يحدّث نفسه)، qubba-play.aab = للرفع على Google Play
       - name: Rename outputs
         run: |
-          cp android/app/build/outputs/apk/github/release/app-github-release.apk ghabiy.apk
-          cp android/app/build/outputs/bundle/playRelease/app-play-release.aab ghabiy-play.aab
+          cp android/app/build/outputs/apk/github/release/app-github-release.apk qubba.apk
+          cp android/app/build/outputs/bundle/playRelease/app-play-release.aab qubba-play.aab
 
       - name: Publish release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: android-v${{ github.run_number }}
           name: تطبيق أندرويد — نسخة ${{ github.run_number }}
-          body: نزّل ملف ghabiy.apk على تلفون أندرويد ونصّبه.
+          body: نزّل ملف qubba.apk على تلفون أندرويد ونصّبه.
           make_latest: true
           files: |
-            ghabiy.apk
-            ghabiy-play.aab
+            qubba.apk
+            qubba-play.aab

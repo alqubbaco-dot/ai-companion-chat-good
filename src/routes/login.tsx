@@ -123,18 +123,18 @@ function LoginPage() {
         <div className="text-center">
           <img
             src="/icons/logo.webp"
-            alt="الغباء الصناعي"
+            alt="القبة"
             width={80}
             height={80}
             className="mx-auto size-20 rounded-[30%] shadow-lg"
             draggable={false}
           />
-          <p className="mt-2 font-display text-sm font-bold text-butter">الغباء الصناعي</p>
+          <p className="mt-2 font-display text-sm font-bold text-butter">القبة</p>
           <h2 className="mt-2 font-display text-xl font-extrabold tracking-tight text-ink">
             {mode === "signup" ? "حساب جديد" : "تسجيل الدخول"}
           </h2>
           <p className="mt-1 text-[11px] font-semibold text-muted-ink">
-            {mode === "signup" ? "سوّي حسابك وابدأ السوالف ويه الغباء الصناعي" : "دخّل إيميلك وكلمة السر وارجع لسوالفك"}
+            {mode === "signup" ? "سوّي حسابك وابدأ السوالف ويه القبة" : "دخّل إيميلك وكلمة السر وارجع لسوالفك"}
           </p>
         </div>
 

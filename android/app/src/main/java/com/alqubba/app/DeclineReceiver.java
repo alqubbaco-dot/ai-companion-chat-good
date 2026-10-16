@@ -1,4 +1,4 @@
-package com.ghabiy.app;
+package com.alqubba.app;
 
 import android.content.BroadcastReceiver;
 import android.content.Context;

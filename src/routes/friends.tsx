@@ -38,12 +38,12 @@ function formatChatTime(iso: string, lang: string): string {
 export const Route = createFileRoute("/friends")({
   head: () => ({
     meta: [
-      { title: "الأصدقاء — الغباء الصناعي" },
+      { title: "الأصدقاء — القبة" },
       {
         name: "description",
         content: "ابحث عن مستخدمين، أرسل طلبات صداقة، وتابع حالة الاتصال لحظة بلحظة.",
       },
-      { property: "og:title", content: "الأصدقاء — الغباء الصناعي" },
+      { property: "og:title", content: "الأصدقاء — القبة" },
       {
         property: "og:description",
         content: "ابحث عن مستخدمين، أرسل طلبات صداقة، وتابع حالة الاتصال لحظة بلحظة.",

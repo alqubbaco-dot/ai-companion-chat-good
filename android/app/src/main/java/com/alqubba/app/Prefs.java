@@ -1,4 +1,4 @@
-package com.ghabiy.app;
+package com.alqubba.app;
 
 import android.content.Context;
 import android.content.SharedPreferences;

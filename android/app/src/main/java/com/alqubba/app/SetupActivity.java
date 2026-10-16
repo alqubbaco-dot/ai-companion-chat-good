@@ -1,4 +1,4 @@
-package com.ghabiy.app;
+package com.alqubba.app;
 
 import android.Manifest;
 import android.app.Activity;
@@ -74,7 +74,7 @@ public class SetupActivity extends Activity {
         root.setPadding(dp(18), dp(24), dp(18), dp(24));
         scroll.addView(root);
 
-        TextView title = text("👋 أهلاً بيك بالغباء الصناعي", 24, Color.WHITE, true);
+        TextView title = text("👋 أهلاً بيك بالقبة", 24, Color.WHITE, true);
         root.addView(title);
         TextView sub = text("خطوات بسيطة حتى توصلك المكالمات والرسائل حتى لو التطبيق مسكّر. اضغط كل زر ووافق.",
                 15, 0xFFD6D9FF, false);
@@ -153,7 +153,7 @@ public class SetupActivity extends Activity {
         final Intent autostart = findAutostartIntent();
         if (autostart != null) {
             addStep("🚀", "التشغيل التلقائي",
-                    "تلفونك يسكّر التطبيقات بالخلفية. فعّل «الغباء الصناعي» بالقائمة اللي تنفتح، وارجع.",
+                    "تلفونك يسكّر التطبيقات بالخلفية. فعّل «القبة» بالقائمة اللي تنفتح، وارجع.",
                     Prefs.autostartDone(this), "فتح الإعداد",
                     () -> {
                         Prefs.setAutostartDone(this);

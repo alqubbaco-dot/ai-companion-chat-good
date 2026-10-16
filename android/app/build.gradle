@@ -9,11 +9,11 @@ def releaseKeystore = System.getenv('ANDROID_KEYSTORE_PATH')
 def releasePassword = System.getenv('ANDROID_KEYSTORE_PASSWORD')
 
 android {
-    namespace 'com.ghabiy.app'
+    namespace 'com.alqubba.app'
     compileSdk 36
 
     defaultConfig {
-        applicationId 'com.ghabiy.app'
+        applicationId 'com.alqubba.app'
         minSdk 24
         targetSdk 36
         versionCode runNumber

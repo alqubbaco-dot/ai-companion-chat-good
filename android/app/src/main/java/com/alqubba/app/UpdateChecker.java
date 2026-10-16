@@ -1,4 +1,4 @@
-package com.ghabiy.app;
+package com.alqubba.app;
 
 import android.app.Activity;
 import android.app.AlertDialog;
@@ -127,7 +127,7 @@ final class UpdateChecker {
         if (activity.isFinishing()) return;
         new AlertDialog.Builder(activity)
                 .setTitle("✨ أكو تحديث جديد")
-                .setMessage("نسخة جديدة من «الغباء الصناعي» جاهزة (نسخة " + version + "). تريد تحدّث هسه؟")
+                .setMessage("نسخة جديدة من «القبة» جاهزة (نسخة " + version + "). تريد تحدّث هسه؟")
                 .setPositiveButton("حدّث هسه", (d, w) -> startDownload(activity, apkUrl))
                 .setNegativeButton("بعدين", null)
                 .setNeutralButton("تخطّي هاي النسخة", (d, w) -> Prefs.setSkippedVersion(activity, version))
@@ -157,7 +157,7 @@ final class UpdateChecker {
             old.delete();
 
         DownloadManager.Request req = new DownloadManager.Request(Uri.parse(apkUrl))
-                .setTitle("تحديث الغباء الصناعي")
+                .setTitle("تحديث القبة")
                 .setDescription("جاري تنزيل النسخة الجديدة…")
                 .setMimeType("application/vnd.android.package-archive")
                 .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)

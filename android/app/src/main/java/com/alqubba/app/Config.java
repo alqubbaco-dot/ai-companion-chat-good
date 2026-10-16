@@ -1,4 +1,4 @@
-package com.ghabiy.app;
+package com.alqubba.app;
 
 final class Config {
     static final String BASE_URL = "https://ai-companion-chat-good.vercel.app";

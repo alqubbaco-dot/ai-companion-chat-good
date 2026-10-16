@@ -37,7 +37,7 @@ export function Avatar({
     return (
       <img
         src="/icons/logo.webp"
-        alt="الغباء الصناعي"
+        alt="القبة"
         width={64}
         height={64}
         className={`${sizeClass} shrink-0 rounded-[30%] object-cover shadow-sm select-none ${className}`}

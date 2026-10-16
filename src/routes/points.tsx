@@ -18,7 +18,7 @@ import {
 export const Route = createFileRoute("/points")({
   head: () => ({
     meta: [
-      { title: "نقاطي — الغباء الصناعي" },
+      { title: "نقاطي — القبة" },
       { name: "description", content: "اجمع نقاط من الإعلانات وافتح ميزات جديدة." },
     ],
   }),

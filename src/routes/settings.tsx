@@ -11,12 +11,12 @@ import { canOpenPhoneSetup, openPhoneSetup } from "@/lib/phone-setup";
 export const Route = createFileRoute("/settings")({
   head: () => ({
     meta: [
-      { title: "الإعدادات — الغباء الصناعي" },
-      { name: "description", content: "تخصيص اللغات، المظهر، الصوت، الإشعارات، والخصوصية لتطبيق الغباء الصناعي." },
-      { property: "og:title", content: "الإعدادات — الغباء الصناعي" },
+      { title: "الإعدادات — القبة" },
+      { name: "description", content: "تخصيص اللغات، المظهر، الصوت، الإشعارات، والخصوصية لتطبيق القبة." },
+      { property: "og:title", content: "الإعدادات — القبة" },
       {
         property: "og:description",
-        content: "تخصيص اللغات، المظهر، الصوت، الإشعارات، والخصوصية لتطبيق الغباء الصناعي.",
+        content: "تخصيص اللغات، المظهر، الصوت، الإشعارات، والخصوصية لتطبيق القبة.",
       },
     ],
   }),

@@ -1,4 +1,4 @@
-package com.ghabiy.app;
+package com.alqubba.app;
 
 import android.app.Activity;
 import android.app.KeyguardManager;
@@ -118,7 +118,7 @@ public class IncomingCallActivity extends Activity {
         root.addView(title, tp);
 
         TextView sub = new TextView(this);
-        sub.setText(video ? "📹 مكالمة فيديو واردة… الغباء الصناعي" : "مكالمة صوتية واردة… الغباء الصناعي");
+        sub.setText(video ? "📹 مكالمة فيديو واردة… القبة" : "مكالمة صوتية واردة… القبة");
         sub.setTextColor(Color.argb(200, 255, 255, 255));
         sub.setTextSize(16);
         sub.setGravity(Gravity.CENTER);
