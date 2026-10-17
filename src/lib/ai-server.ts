@@ -8,6 +8,9 @@ import { CHARACTERS_FEATURE, isCharacter, type CharacterId } from "./characters"
 const SUPABASE_URL = "https://etkacphlxhpdjhrvoaqz.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_qwvchdJI-viQlVbiDPtfhg_VG6UOjkk";
 
+/** يرجع من السيرفر لما المستخدم يخلص رسائله المجانية ورسائله المشتراة */
+export const QUOTA_EXHAUSTED = "quota_exhausted";
+
 export type HistoryItem = { role: "user" | "assistant"; text: string };
 
 type AskInput = {
@@ -244,16 +247,34 @@ export const askGemini = createServerFn({ method: "POST" })
     const { data: user, error: authError } = await db.auth.getUser(data.accessToken);
     if (authError || !user?.user) return { ok: false, error: "not signed in" };
 
+    // حد الرسائل: 20 مجانية باليوم (الهزلي والجاد سوية)، والباقي من النقاط
+    const userDb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      auth: { persistSession: false, autoRefreshToken: false },
+      global: { headers: { Authorization: `Bearer ${data.accessToken}` } },
+    });
+    const { data: quota, error: quotaError } = await userDb.rpc("my_bot_quota");
+    if (quotaError) {
+      // إذا ملف bot-quota.sql بعد ما انشغّل، نخلي البوت يشتغل عادي بدون حد
+      console.error("bot quota check failed:", quotaError.message);
+    } else {
+      const q = quota as { free_left?: number; extra?: number } | null;
+      if (q && (q.free_left ?? 0) + (q.extra ?? 0) <= 0) {
+        return { ok: false, error: QUOTA_EXHAUSTED };
+      }
+    }
+    // الرسالة تنحسب بس إذا البوت رد فعلاً، حتى ما تروح على المستخدم إذا Gemini عطل
+    const countMessage = async () => {
+      if (quotaError) return;
+      const { error } = await userDb.rpc("use_bot_message");
+      if (error) console.error("bot quota use failed:", error.message);
+    };
+
     let systemText = data.isFunny
       ? data.lang === "ar" ? FUNNY_AR : FUNNY_EN
       : data.lang === "ar" ? SERIOUS_AR : SERIOUS_EN;
 
     // شخصية مدفوعة بالنقاط: نتأكد إن المستخدم فاتحها فعلاً قبل ما نستعملها
     if (data.isFunny && data.lang === "ar" && data.character) {
-      const userDb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-        auth: { persistSession: false, autoRefreshToken: false },
-        global: { headers: { Authorization: `Bearer ${data.accessToken}` } },
-      });
       const { data: unlocked } = await userDb
         .from("unlocked_features")
         .select("feature")
@@ -283,6 +304,7 @@ export const askGemini = createServerFn({ method: "POST" })
         const attempt = await callModel(model, useLowThinking);
         if (attempt.kind === "ok") {
           console.log(`Gemini ok: ${model} in ${Date.now() - startedAt}ms`);
+          await countMessage();
           return { ok: true, text: attempt.text, model };
         }
         lastError = attempt.error;
@@ -292,7 +314,10 @@ export const askGemini = createServerFn({ method: "POST" })
           // الموديل ما يقبل إعداد التفكير: نعيد نفس الموديل بدونه
           useLowThinking = false;
           const retry = await callModel(model, false);
-          if (retry.kind === "ok") return { ok: true, text: retry.text, model };
+          if (retry.kind === "ok") {
+            await countMessage();
+            return { ok: true, text: retry.text, model };
+          }
           lastError = retry.error;
           console.error("Gemini error:", lastError);
         }
