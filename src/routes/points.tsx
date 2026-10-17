@@ -252,9 +252,10 @@ function PointsPage() {
               </p>
             ) : null}
           </div>
-          <p className="mt-3 text-center text-[11px] text-muted-ink">
-            الميزات اللي مكتوب عليها «قريباً» دا نبنيها، وتنفتح للشراء أول ما تجهز.
-          </p>
+          <div className="mt-3 space-y-1 text-center text-[12px] text-muted-ink">
+            <p>💬 خلصت رسائلك ويا الغبي؟ نقطة وحدة تنطيك 5 رسائل.</p>
+            <p>🎁 كل ما تكمّل ميزة، راح نفتحلك ميزات جديدة. اجمع نقاطك من هسه حتى تكون أول واحد يفتحها.</p>
+          </div>
         </section>
       </div>
     </PageBody>
