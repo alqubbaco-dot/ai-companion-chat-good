@@ -3,6 +3,8 @@ import type { ChatMessage } from "@/lib/chat-store";
 import { useI18n } from "@/lib/i18n";
 import { Avatar } from "@/components/app/Avatar";
 import { Markdown } from "./Markdown";
+import { QuotaActions } from "./QuotaActions";
+import { isQuotaMessage } from "@/lib/bot-quota";
 
 export function TypingBubble() {
   const { t } = useI18n();
@@ -29,6 +31,21 @@ export function MessageBubble({ message }: { message: ChatMessage }) {
       <div className="ms-auto flex max-w-[82%] animate-rise justify-end">
         <div className="bg-brand rounded-3xl rounded-ee-md px-4 py-2.5 shadow-sm">
           <p className="whitespace-pre-wrap text-[15px] leading-relaxed">{message.content}</p>
+        </div>
+      </div>
+    );
+  }
+
+  // رسالة "خلصت سوالف اليوم": نطلع وياها أزرار الإعلان والنقاط بدل النسخ والمشاركة
+  if (isQuotaMessage(message.content)) {
+    return (
+      <div className="flex max-w-[88%] animate-rise items-end gap-2">
+        <Avatar bot size="sm" className="mb-1" />
+        <div className="min-w-0 flex-1">
+          <div className="rounded-3xl rounded-es-md border border-line bg-cream px-4 py-3 shadow-sm">
+            <p className="text-[15px] leading-relaxed">{message.content}</p>
+            <QuotaActions />
+          </div>
         </div>
       </div>
     );

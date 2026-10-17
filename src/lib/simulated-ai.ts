@@ -1,5 +1,6 @@
 import type { Lang } from "./i18n";
-import { askGemini, type HistoryItem } from "./ai-server";
+import { askGemini, QUOTA_EXHAUSTED, type HistoryItem } from "./ai-server";
+import { QUOTA_TEXT_AR, QUOTA_TEXT_EN } from "./bot-quota";
 import { supabase } from "./supabase";
 
 export function titleFromPrompt(prompt: string): string {
@@ -32,6 +33,11 @@ export function streamSimulatedReply(
         timeout,
       ]);
       if (cancelled) return;
+
+      if (!result.ok && result.error === QUOTA_EXHAUSTED) {
+        onDone(lang === "ar" ? QUOTA_TEXT_AR : QUOTA_TEXT_EN);
+        return;
+      }
 
       if (!result.ok) {
         console.error("AI Error:", result.error);

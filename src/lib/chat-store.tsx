@@ -12,6 +12,7 @@ import { createId, readStored, writeStored } from "./storage";
 import { streamSimulatedReply, titleFromPrompt } from "./simulated-ai";
 import { useI18n } from "./i18n";
 import { supabase } from "./supabase";
+import { isQuotaMessage } from "./bot-quota";
 
 export type ChatRole = "user" | "assistant";
 
@@ -114,7 +115,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
 
       // آخر 10 رسائل من نفس المحادثة (بدون رسائل الخطأ والفارغة)
       const history = (conversationsRef.current.find((c) => c.id === conversationId)?.messages ?? [])
-        .filter((m) => m.content.trim() && !m.content.startsWith("⚠️"))
+        .filter((m) => m.content.trim() && !m.content.startsWith("⚠️") && !isQuotaMessage(m.content))
         .slice(-10)
         .map((m) => ({ role: m.role, text: m.content }));
 
