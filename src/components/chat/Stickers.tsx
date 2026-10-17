@@ -84,18 +84,16 @@ export const STICKERS: Sticker[] = [
     ),
   },
   {
-    id: "naal",
-    label: "نعال الحجية",
-    emoji: "🩴",
-    bg: "#ffd1dc",
+    id: "aghati",
+    label: "اغاتي",
+    emoji: "🌹",
+    bg: "#ffe0e6",
     art: (
       <g stroke={INK} strokeWidth="3" strokeLinejoin="round" strokeLinecap="round">
-        <path d="M14 40 h14 M10 54 h16 M16 68 h12" fill="none" stroke="#c0567a" />
-        <g transform="rotate(-25 66 62)">
-          <path d="M34 66 q0 -20 30 -20 q36 0 40 20 q-4 20 -40 20 q-30 0 -30 -20 z" fill="#e9d3a8" />
-          <path d="M40 60 q0 -16 24 -16 q30 0 34 16 q-4 16 -34 16 q-24 0 -24 -16 z" fill="#3b5ba5" />
-          <path d="M58 46 q14 18 30 2" fill="none" stroke="#e8463c" strokeWidth="8" />
-        </g>
+        <path d="M60 60 v40" fill="none" stroke="#3f8f4a" strokeWidth="5" />
+        <path d="M60 84 q-18 -4 -22 -16 q16 0 22 12 z M60 76 q16 -6 22 -18 q-16 0 -22 12 z" fill="#5fbf6a" />
+        <path d="M60 64 q-24 -2 -24 -22 q0 -14 12 -20 q6 8 12 8 q6 0 12 -8 q12 6 12 20 q0 20 -24 22 z" fill="#e8463c" />
+        <path d="M48 36 q12 10 24 0 M52 46 q8 6 16 0" fill="none" stroke="#a8232a" />
       </g>
     ),
   },
@@ -134,21 +132,19 @@ export const STICKERS: Sticker[] = [
     ),
   },
   {
-    id: "kia",
-    label: "كيا",
-    emoji: "🚐",
-    bg: "#cfe8f5",
+    id: "ta2mur",
+    label: "تأمر امر",
+    emoji: "👌",
+    bg: "#d6ecff",
     art: (
       <g stroke={INK} strokeWidth="3" strokeLinejoin="round" strokeLinecap="round">
-        <path d="M8 40 h10 M4 52 h12" fill="none" stroke="#7aa6c2" />
-        <path d="M22 42 q2 -12 14 -12 h50 q12 0 16 14 l6 18 v18 h-86 z" fill="#ffffff" />
-        <path d="M22 66 h86" fill="none" stroke="#2f6fb0" strokeWidth="6" />
-        <rect x="32" y="38" width="16" height="14" rx="2" fill="#a8d4f0" />
-        <rect x="52" y="38" width="16" height="14" rx="2" fill="#a8d4f0" />
-        <rect x="72" y="38" width="14" height="14" rx="2" fill="#a8d4f0" />
-        <path d="M90 38 h8 l6 14 h-14 z" fill="#a8d4f0" />
-        <circle cx="40" cy="82" r="9" fill="#3a3a3a" />
-        <circle cx="90" cy="82" r="9" fill="#3a3a3a" />
+        <rect x="58" y="16" width="11" height="40" rx="5.5" fill={SKIN} />
+        <rect x="70" y="20" width="11" height="38" rx="5.5" fill={SKIN} />
+        <rect x="82" y="28" width="10" height="32" rx="5" fill={SKIN} />
+        <path d="M34 56 h58 v18 q0 24 -28 24 q-26 0 -32 -20 z" fill={SKIN} />
+        <circle cx="44" cy="52" r="13" fill={SKIN} />
+        <circle cx="44" cy="52" r="5" fill="#d6ecff" />
+        <path d="M18 30 l6 6 M14 46 h8 M22 18 l2 8" fill="none" stroke="#2f6fb0" />
       </g>
     ),
   },
