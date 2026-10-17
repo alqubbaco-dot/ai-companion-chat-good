@@ -100,38 +100,36 @@ export const STICKERS: Sticker[] = [
     ),
   },
   {
-    id: "zmal",
-    label: "زمال",
-    emoji: "🐴",
-    bg: "#e3e0f5",
+    id: "fadwa",
+    label: "فدوة",
+    emoji: "❤️",
+    bg: "#ffd6d6",
     art: (
       <g stroke={INK} strokeWidth="3" strokeLinejoin="round" strokeLinecap="round">
-        <path d="M44 34 l-6 -26 q10 2 14 22 z M76 34 l6 -26 q-10 2 -14 22 z" fill="#9b9bab" />
-        <path d="M40 40 q20 -14 40 0 q8 30 4 46 h-48 q-4 -16 4 -46 z" fill="#a9a9b8" />
-        <ellipse cx="60" cy="88" rx="22" ry="14" fill="#e6dcd0" />
-        <circle cx="52" cy="88" r="2.5" fill={INK} />
-        <circle cx="68" cy="88" r="2.5" fill={INK} />
-        <circle cx="48" cy="56" r="3.5" fill={INK} />
-        <circle cx="72" cy="56" r="3.5" fill={INK} />
-        <path d="M56 36 q4 -8 8 0" fill="none" />
+        <path d="M60 94 q-40 -24 -40 -50 q0 -20 20 -20 q14 0 20 14 q6 -14 20 -14 q20 0 20 20 q0 26 -40 50 z" fill="#e8463c" />
+        <path d="M34 40 q2 -8 10 -8" fill="none" stroke="#ffffff" strokeWidth="4" />
+        <circle cx="50" cy="52" r="3.5" fill={INK} />
+        <circle cx="70" cy="52" r="3.5" fill={INK} />
+        <path d="M50 64 q10 10 20 0" fill="none" />
+        <path d="M14 28 l4 -4 M104 28 l-4 -4 M20 16 l2 6 M100 16 l-2 6" fill="none" stroke="#e8463c" />
       </g>
     ),
   },
   {
-    id: "hayesha",
-    label: "هايشة",
-    emoji: "🐄",
-    bg: "#d8f0c8",
+    id: "3ala_rasi",
+    label: "على راسي",
+    emoji: "🫡",
+    bg: "#fff1c4",
     art: (
       <g stroke={INK} strokeWidth="3" strokeLinejoin="round" strokeLinecap="round">
-        <path d="M36 36 q-14 -2 -16 -16 q10 6 20 8 M84 36 q14 -2 16 -16 q-10 6 -20 8" fill="#f3e6c8" />
-        <path d="M34 40 q26 -16 52 0 q6 22 0 40 h-52 q-6 -18 0 -40 z" fill="#ffffff" />
-        <path d="M38 46 q8 -4 12 4 q-4 8 -12 4 z M72 44 q10 -2 10 8 q-8 4 -10 -8 z" fill={INK} />
-        <ellipse cx="60" cy="84" rx="24" ry="14" fill="#f7a8b8" />
-        <circle cx="52" cy="84" r="3" fill={INK} />
-        <circle cx="68" cy="84" r="3" fill={INK} />
-        <circle cx="48" cy="60" r="3.5" fill={INK} />
-        <circle cx="72" cy="60" r="3.5" fill={INK} />
+        <circle cx="60" cy="64" r="30" fill={SKIN} />
+        <path d="M30 56 q4 -26 30 -28 q26 2 30 28 q-14 -8 -30 -8 q-16 0 -30 8 z" fill="#3b2a1e" />
+        <path d="M44 66 q6 -5 12 0 M64 66 q6 -5 12 0" fill="none" />
+        <path d="M48 80 q12 10 24 0" fill="none" />
+        <g transform="rotate(-20 84 40)">
+          <rect x="70" y="26" width="34" height="14" rx="7" fill={SKIN} />
+          <rect x="96" y="30" width="16" height="10" rx="5" fill={SKIN} />
+        </g>
       </g>
     ),
   },
