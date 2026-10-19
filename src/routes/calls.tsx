@@ -185,9 +185,18 @@ function CallsPage() {
               }}
               className="flex select-none items-center gap-3 rounded-2xl border-2 border-line/60 bg-cream/30 p-3 [-webkit-touch-callout:none]"
             >
-              <div className="grid size-11 shrink-0 place-items-center rounded-full bg-teal/20 font-display font-bold">
-                {name.charAt(0)}
-              </div>
+              {person?.avatarUrl ? (
+                <img
+                  src={person.avatarUrl}
+                  alt=""
+                  className="size-11 shrink-0 rounded-full object-cover"
+                  draggable={false}
+                />
+              ) : (
+                <div className="grid size-11 shrink-0 place-items-center rounded-full bg-teal/20 font-display font-bold">
+                  {name.charAt(0)}
+                </div>
+              )}
               <div className="min-w-0 flex-1">
                 <p className={`break-words text-sm font-semibold leading-snug ${missed ? "text-red-600" : "text-ink"}`}>{name}</p>
                 <p className={`text-[12px] leading-snug ${missed ? "text-red-600" : "text-muted-ink"}`}>
