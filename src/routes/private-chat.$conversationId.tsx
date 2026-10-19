@@ -670,8 +670,8 @@ function PrivateChatPage() {
           ) : null}
         </div>
         <div className="min-w-0 flex-1">
-          <p className="truncate font-display text-[15px] font-extrabold leading-tight">{title}</p>
-          <p className={`truncate text-[11px] ${otherActivity || isOnline ? "text-emerald-600" : "text-muted-ink"}`}>
+          <p className="line-clamp-2 break-words font-display text-[15px] font-extrabold leading-tight">{title}</p>
+          <p className={`break-words text-[11px] leading-snug ${otherActivity || isOnline ? "text-emerald-600" : "text-muted-ink"}`}>
             {otherActivity === "typing"
               ? "يكتب الآن…"
               : otherActivity === "recording"
