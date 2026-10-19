@@ -341,7 +341,7 @@ function formatLastSeen(iso?: string | null): string {
 
 function PrivateChatPage() {
   const { conversationId } = Route.useParams();
-  const { directory, profile, isOnline: isOnlineNow, relationOf, blockUser, unblockUser } = useFriends();
+  const { directory, profile, isOnline: isOnlineNow, relationOf, blockUser, unblockUser, ensureUsers } = useFriends();
   const { startCall } = useCall();
   const navigate = useNavigate();
   const [dialog, setDialog] = useState<null | "report" | "block">(null);
@@ -431,6 +431,11 @@ function PrivateChatPage() {
       document.removeEventListener("visibilitychange", mark);
     };
   }, [hasUnreadFromOther, conversationId, profile.id]);
+
+  // إذا الطرف الثاني مو بقائمتي (مثلاً صديق محذوف)، نجيب اسمه وصورته
+  useEffect(() => {
+    if (otherUserId) ensureUsers([otherUserId]);
+  }, [otherUserId, ensureUsers]);
 
   const otherUser = directory.find((person) => person.id === otherUserId);
   const title = otherUser?.name || "محادثة خاصة";
