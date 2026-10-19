@@ -132,6 +132,9 @@ function RootShell({ children }: { children: ReactNode }) {
   );
 }
 
+// صفحات عامة تنفتح بدون تسجيل دخول (مطلوبة لـ Google Play)
+const PUBLIC_PATHS = ["/privacy", "/delete-account"];
+
 function CloudSecurityGateway({ children }: { children: ReactNode }) {
   const { profile, hydrated } = useFriends();
   const router = useRouter();
@@ -141,11 +144,12 @@ function CloudSecurityGateway({ children }: { children: ReactNode }) {
   // الحساب يُعتبر مسجّلاً إذا كان صاحبه داخلاً فعلاً عبر Supabase (عنده id)
   const isRegistered = Boolean(profile && profile.id);
   const currentPath = location.pathname;
+  const isPublic = PUBLIC_PATHS.includes(currentPath.replace(/\/+$/, "") || "/");
 
   useEffect(() => {
     if (!hydrated) return;
     // صفحات عامة تنفتح بدون تسجيل دخول (مثل سياسة الخصوصية لـ Google Play)
-    if (currentPath === "/privacy") return;
+    if (isPublic) return;
     if (!isRegistered && currentPath !== "/login") {
       router.navigate({ to: "/login" });
     } else if (isRegistered && currentPath === "/login") {
@@ -153,6 +157,9 @@ function CloudSecurityGateway({ children }: { children: ReactNode }) {
       router.navigate({ to: "/" });
     }
   }, [hydrated, isRegistered, currentPath, router]);
+
+  // الصفحات العامة تنعرض فوراً بدون انتظار تحميل الحساب وبدون واجهة التطبيق
+  if (isPublic) return <Outlet />;
 
   // انتظر حتى يتم تحميل الذاكرة بشكل كامل وصحيح أولاً من المتجر
   if (!hydrated) {
