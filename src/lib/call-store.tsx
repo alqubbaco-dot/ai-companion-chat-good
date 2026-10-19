@@ -598,6 +598,7 @@ export function CallProvider({ children }: { children: ReactNode }) {
         "اضغط حتى ترد على المكالمة",
         `/friends?call=${encodeURIComponent(info.callId)}&from=${encodeURIComponent(myId)}`,
         `call-${info.callId}`,
+        profile.avatarUrl,
       ).then((r) => {
         // نوضّح للمتصل إذا الإشعار ما وصل لتلفون صديقه
         if (r.sent > 0) return;
