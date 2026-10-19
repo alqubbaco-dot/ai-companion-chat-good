@@ -65,7 +65,7 @@ function describe(log: CallLog, mine: boolean): { label: string; missed: boolean
 }
 
 function CallsPage() {
-  const { profile, directory } = useFriends();
+  const { profile, directory, ensureUsers } = useFriends();
   const { startCall, phase } = useCall();
   const [logs, setLogs] = useState<CallLog[]>([]);
   const [loading, setLoading] = useState(true);
@@ -92,6 +92,12 @@ function CallsPage() {
   useEffect(() => {
     if (phase === "idle") void load();
   }, [phase, load]);
+
+  // أسماء وصور الأشخاص بالسجل اللي مو بقائمة أصدقائي (مثلاً صديق محذوف)
+  useEffect(() => {
+    if (!profile.id) return;
+    ensureUsers(logs.map((log) => (log.caller_id === profile.id ? log.callee_id : log.caller_id)));
+  }, [logs, profile.id, ensureUsers]);
 
   // ضغط مطوّل على المكالمة = حذفها
   const startPress = (log: CallLog) => {
