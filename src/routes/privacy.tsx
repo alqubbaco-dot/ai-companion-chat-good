@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 
 // صفحة سياسة الخصوصية (عامة، تنفتح بدون تسجيل دخول) — مطلوبة لنشر التطبيق على Google Play
 export const Route = createFileRoute("/privacy")({
@@ -12,9 +12,10 @@ export const Route = createFileRoute("/privacy")({
   component: PrivacyPage,
 });
 
-const UPDATED = "16 أكتوبر 2026";
-const UPDATED_EN = "October 16, 2026";
-const CONTACT = "abnalramady@gmail.com";
+const UPDATED = "19 أكتوبر 2026";
+const UPDATED_EN = "October 19, 2026";
+const CONTACT = "alqubba@gmail.com";
+const DEVELOPER = "Qubba Apps";
 
 function Section({ title, children, id }: { title: string; children: ReactNode; id?: string }) {
   return (
@@ -35,6 +36,9 @@ function PrivacyPage() {
             <h1 className="font-display text-3xl font-extrabold">سياسة الخصوصية</h1>
           </div>
           <p className="text-sm text-muted-ink">تطبيق «القبة» — آخر تحديث: {UPDATED}</p>
+          <p className="text-sm text-muted-ink">
+            يدير هذا التطبيق: <b dir="ltr">{DEVELOPER}</b>
+          </p>
         </header>
 
         <div dir="rtl" className="space-y-7">
@@ -49,7 +53,7 @@ function PrivacyPage() {
                 <b>الإيميل وكلمة السر:</b> حتى تسوّي حساب وتسجّل دخول. كلمة السر تنحفظ مشفّرة وما يكدر يشوفها أحد.
               </li>
               <li>
-                <b>رقم الهاتف (اختياري):</b> إذا كتبته، أصدقاءك يكدرون يلگونك بالبحث برقمك. الرقم ما يطلع لأي أحد،
+                <b>رقم الهاتف (اختياري):</b> إذا كتبته، أصدقاءك يكدرون يلقونك بالبحث برقمك. الرقم ما يطلع لأي أحد،
                 البحث يطلّع الاسم بس.
               </li>
               <li>
@@ -177,7 +181,14 @@ function PrivacyPage() {
             <p>
               تكدر تحذف حسابك وكل بياناتك (الملف الشخصي، الأصدقاء، الرسائل، سجل المكالمات، النقاط والميزات المفتوحة) بنفسك بأي وقت: من
               التطبيق افتح <b>حسابي</b> ← <b>حذف الحساب نهائياً</b>. الحذف فوري ونهائي. وإذا ما تكدر تدخل للتطبيق،
-              راسلنا على <b dir="ltr">{CONTACT}</b> واذكر رقم هاتفك المسجّل، ونحذف البيانات خلال 30 يوم كحد أقصى.
+              راسلنا على <b dir="ltr">{CONTACT}</b> من نفس الإيميل المسجّل بحسابك، ونحذف البيانات خلال 30 يوم كحد أقصى.
+            </p>
+            <p>
+              التفاصيل الكاملة بصفحة{" "}
+              <Link to="/delete-account" className="underline">
+                حذف الحساب
+              </Link>
+              .
             </p>
           </Section>
 
@@ -200,6 +211,9 @@ function PrivacyPage() {
         <div dir="ltr" lang="en" className="space-y-5 border-t-2 border-line pt-8 text-left">
           <h2 className="font-display text-2xl font-extrabold">Privacy Policy (English)</h2>
           <p className="text-sm text-muted-ink">"Qubba Chat" (القبة) — Last updated: {UPDATED_EN}</p>
+          <p className="text-sm text-muted-ink">
+            This app is operated by <b>{DEVELOPER}</b>.
+          </p>
           <div className="space-y-3 text-[15px] leading-7 text-ink/85">
             <p>
               <b>Data we collect:</b> your email address and password (for sign-up and sign-in; the password is
@@ -260,8 +274,12 @@ function PrivacyPage() {
             <p>
               <b>Account and data deletion:</b> you can delete your account and all associated data (including points and unlocked features) yourself at
               any time from the app: open <b>My account</b> → <b>Delete account permanently</b>. Deletion is immediate
-              and permanent. If you cannot access the app, email <b>{CONTACT}</b> with your registered phone number and
-              we will delete the data within 30 days.
+              and permanent. If you cannot access the app, email <b>{CONTACT}</b> from the email address registered to
+              your account and we will delete the data within 30 days. Full details:{" "}
+              <Link to="/delete-account" className="underline">
+                Delete your account
+              </Link>
+              .
             </p>
             <p>
               <b>Age:</b> the app is intended for users aged 18 and over. We do not knowingly collect data from
