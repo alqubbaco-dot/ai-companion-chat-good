@@ -3,8 +3,15 @@ package com.alqubba.app;
 import android.app.Activity;
 import android.app.KeyguardManager;
 import android.content.Intent;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.BitmapShader;
+import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.Paint;
+import android.graphics.Shader;
 import android.graphics.Typeface;
+import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Build;
 import android.os.Bundle;
@@ -16,7 +23,10 @@ import android.view.WindowManager;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
+import java.io.InputStream;
 import java.lang.ref.WeakReference;
+import java.net.HttpURLConnection;
+import java.net.URL;
 
 /** شاشة المكالمة الواردة بملء الشاشة (حتى والتلفون مقفول) */
 public class IncomingCallActivity extends Activity {
@@ -28,6 +38,7 @@ public class IncomingCallActivity extends Activity {
     private String tag;
     private String path;
     private boolean video;
+    private String avatarUrl;
     private final Handler handler = new Handler(Looper.getMainLooper());
 
     static boolean isShowing(String tag) {
@@ -75,11 +86,55 @@ public class IncomingCallActivity extends Activity {
         from = i.getStringExtra(Notifier.EXTRA_FROM);
         tag = i.getStringExtra(Notifier.EXTRA_TAG);
         path = i.getStringExtra(Notifier.EXTRA_PATH);
+        avatarUrl = i.getStringExtra(Notifier.EXTRA_AVATAR);
         video = i.getBooleanExtra(Notifier.EXTRA_VIDEO, false);
     }
 
     private int dp(int v) {
         return Math.round(v * getResources().getDisplayMetrics().density);
+    }
+
+    /** يحمّل صورة المتصل ويعرضها دائرية بدل الحرف الأول */
+    private void loadAvatar(final TextView view) {
+        final String url = avatarUrl;
+        if (url == null || !url.startsWith("https://")) return;
+        final int size = dp(120);
+        new Thread(() -> {
+            Bitmap round = null;
+            HttpURLConnection conn = null;
+            try {
+                conn = (HttpURLConnection) new URL(url).openConnection();
+                conn.setConnectTimeout(5000);
+                conn.setReadTimeout(5000);
+                try (InputStream in = conn.getInputStream()) {
+                    Bitmap src = BitmapFactory.decodeStream(in);
+                    if (src != null) round = circle(src, size);
+                }
+            } catch (Exception ignored) {
+                // ما وصلت الصورة: يبقى الحرف الأول
+            } finally {
+                if (conn != null) conn.disconnect();
+            }
+            final Bitmap result = round;
+            if (result == null) return;
+            handler.post(() -> {
+                if (isFinishing()) return;
+                view.setText("");
+                view.setBackground(new BitmapDrawable(getResources(), result));
+            });
+        }).start();
+    }
+
+    private static Bitmap circle(Bitmap src, int size) {
+        int side = Math.min(src.getWidth(), src.getHeight());
+        Bitmap sq = Bitmap.createBitmap(src, (src.getWidth() - side) / 2, (src.getHeight() - side) / 2, side, side);
+        Bitmap scaled = Bitmap.createScaledBitmap(sq, size, size, true);
+        Bitmap out = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888);
+        Canvas canvas = new Canvas(out);
+        Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        paint.setShader(new BitmapShader(scaled, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP));
+        canvas.drawCircle(size / 2f, size / 2f, size / 2f, paint);
+        return out;
     }
 
     private void buildUi(String name) {
@@ -105,6 +160,7 @@ public class IncomingCallActivity extends Activity {
         circle.setStroke(dp(4), Color.argb(50, 255, 255, 255));
         avatar.setBackground(circle);
         root.addView(avatar, new LinearLayout.LayoutParams(dp(120), dp(120)));
+        loadAvatar(avatar);
 
         TextView title = new TextView(this);
         title.setText(name);
