@@ -109,19 +109,13 @@ export async function searchCloudUsers(query: string, currentUserId: string): Pr
     // جلب الحسابات المتطابقة بالاسم أو اسم المستخدم، مع استثناء حساب المستخدم الحالي
     const safe = q.replace(/[,()%]/g, " ").trim();
     if (!safe) return [];
-    let request = supabase
-      .from("users_directory")
-      .select("id, name, handle, phone, status")
-      .or(`name.ilike.%${safe}%,handle.ilike.%${safe}%`);
-
-    if (currentUserId) request = request.neq("id", currentUserId);
-
-    const { data, error } = await request;
+    // البحث يصير داخل السيرفر (أول 20 نتيجة)، وحسابي ما يرجع بالنتائج
+    const { data, error } = await supabase.rpc("search_users", { p_query: safe });
 
     if (error) throw error;
     if (!data) return [];
 
-    return data as CloudUser[];
+    return (data as CloudUser[]).map((u) => ({ ...u, phone: "" }));
   } catch (err) {
     console.error("خطأ أثناء محرك البحث السحابي الموحد:", err);
     return [];
@@ -167,7 +161,7 @@ export async function fetchPendingRequests(userId: string): Promise<any[]> {
         id,
         status,
         sender_id,
-        users_directory!friendships_sender_id_fkey(name, handle, phone)
+        users_directory!friendships_sender_id_fkey(name, handle)
       `)
       .eq("receiver_id", userId)
       .eq("status", "pending");
