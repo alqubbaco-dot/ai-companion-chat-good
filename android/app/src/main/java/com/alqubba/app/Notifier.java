@@ -37,6 +37,7 @@ final class Notifier {
     static final String EXTRA_TAG = "tag";
     static final String EXTRA_PATH = "path";
     static final String EXTRA_VIDEO = "video";
+    static final String EXTRA_AVATAR = "avatar";
 
     private Notifier() {
     }
@@ -120,7 +121,8 @@ final class Notifier {
                 .putExtra(EXTRA_NAME, name)
                 .putExtra(EXTRA_TAG, tag)
                 .putExtra(EXTRA_PATH, url)
-                .putExtra(EXTRA_VIDEO, video);
+                .putExtra(EXTRA_VIDEO, video)
+                .putExtra(EXTRA_AVATAR, d.get("icon"));
         PendingIntent fullPi = PendingIntent.getActivity(c, id, full, piFlags());
 
         Intent accept = new Intent(c, MainActivity.class)
