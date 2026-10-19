@@ -80,3 +80,11 @@ revoke all on function public.users_basic(text[]) from public, anon;
 grant execute on function public.search_users(text) to authenticated;
 grant execute on function public.my_directory() to authenticated;
 grant execute on function public.users_basic(text[]) to authenticated;
+
+-- 5) المرحلة الأخيرة: كل مستخدم يقرا صفّه هو بس من الجدول، والباقي عن طريق الدوال فوق
+--    (تم تشغيله بعد ما تأكدنا إن التطبيق يشتغل بالدوال الجديدة)
+drop policy if exists "signed in users can search" on public.users_directory;
+drop policy if exists "users read own profile" on public.users_directory;
+create policy "users read own profile" on public.users_directory
+  for select to authenticated
+  using (id = auth.uid()::text);
