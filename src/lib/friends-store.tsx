@@ -311,19 +311,32 @@ export function FriendsProvider({ children }: { children: ReactNode }) {
     // شبكة بطيئة أو مشروع Supabase متوقف يجب ألا يعلّق الواجهة للأبد
     const safetyTimer = setTimeout(() => setHydrated(true), 8000);
 
-    void supabase.auth.getUser().then(({ data }) => {
-      const userId = data.user?.id;
-      return Promise.all([
-        refreshProfile(),
-        fetchCloudUsers(),
-        userId ? refreshRelations(userId) : Promise.resolve(),
-      ]);
-    }).catch((err) => {
-      console.error("تعذر تحميل بيانات البداية:", err);
-    }).finally(() => {
-      clearTimeout(safetyTimer);
-      setHydrated(true);
-    });
+    void (async () => {
+      try {
+        // نقرأ الجلسة من الهاتف نفسه (بدون ما نسأل السيرفر) حتى يفتح التطبيق بسرعة
+        const { data: sessionData } = await supabase.auth.getSession();
+        const userId = sessionData.session?.user?.id;
+        if (!userId) return; // مو مسجّل دخول: يروح لصفحة الدخول فوراً
+
+        // دخول فوري من الملف المحفوظ بالهاتف، والتحديث من السيرفر يكمل بالخلفية
+        const cached = readStored<Profile>(profileKey(userId), DEFAULT_PROFILE);
+        if (cached.id === userId) {
+          setProfile(cached);
+          clearTimeout(safetyTimer);
+          setHydrated(true);
+        }
+
+        // الأصدقاء وقائمة الحسابات ما نوقف عليها الدخول، تتحمّل بالخلفية
+        void fetchCloudUsers();
+        void refreshRelations(userId);
+        await refreshProfile();
+      } catch (err) {
+        console.error("تعذر تحميل بيانات البداية:", err);
+      } finally {
+        clearTimeout(safetyTimer);
+        setHydrated(true);
+      }
+    })();
 
     const channel = supabase
       .channel("schema-db-changes")
@@ -339,6 +352,8 @@ export function FriendsProvider({ children }: { children: ReactNode }) {
       .subscribe();
 
     const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+      // البداية نعالجها فوق بسرعة، فما نكرر نفس الطلبات هنا
+      if (_event === "INITIAL_SESSION") return;
       if (session?.user) {
         const userId = session.user.id;
         // Supabase ينصح بتأجيل أي طلب داخل هذا المستمع حتى لا يتعلق نظام الدخول
