@@ -105,6 +105,8 @@ type FriendsValue = {
   isOnline: (id: string) => boolean;
   /** إعادة جلب الطلبات والأصدقاء من السحابة */
   refreshFriends: () => Promise<void>;
+  /** جلب الاسم والصورة لأشخاص مو بقائمتي (سجل المكالمات، محادثة قديمة) */
+  ensureUsers: (ids: string[]) => void;
 };
 
 const FriendsContext = createContext<FriendsValue | null>(null);
@@ -206,7 +208,7 @@ export function FriendsProvider({ children }: { children: ReactNode }) {
 
   const fetchCloudUsers = useCallback(async () => {
     try {
-      const { data, error } = await supabase.from("users_directory").select("*");
+      const { data, error } = await supabase.rpc("my_directory"); // أصدقائي وطلباتي بس، مو كل المستخدمين
       if (!error && data) {
         const mappedData = data.map((item: CloudUserRow) => ({
           id: item.id,
@@ -222,7 +224,12 @@ export function FriendsProvider({ children }: { children: ReactNode }) {
           accent: item.accent || "teal",
           phone: item.phone
         }));
-        setDirectory(mappedData as Person[]);
+        setDirectory((prev) => {
+        const fresh = mappedData as Person[];
+        const freshIds = new Set(fresh.map((p) => p.id));
+        // نحتفظ بالأشخاص اللي جبناهم لسجل المكالمات أو المحادثات
+        return [...fresh, ...prev.filter((p) => !freshIds.has(p.id))];
+      });
       }
     } catch (err) {
       console.error("خطأ في جلب بيانات الحسابات السحابية الموحدة:", err);
@@ -412,17 +419,15 @@ export function FriendsProvider({ children }: { children: ReactNode }) {
 
   // إذا وصل طلب/صداقة من شخص مو موجود بقائمة الحسابات (سجّل بعد ما فتحنا التطبيق)، نجيب بياناته
   const triedMissing = useRef<Set<string>>(new Set());
-  useEffect(() => {
-    const ids = [...relations.friends, ...relations.incoming, ...relations.outgoing, ...relations.blocked];
-    const known = new Set(directory.map((p) => p.id));
-    const missing = ids.filter((id) => !known.has(id) && !triedMissing.current.has(id));
+  const directoryRef = useRef<Person[]>([]);
+  directoryRef.current = directory;
+  const ensureUsers = useCallback((ids: string[]) => {
+    const known = new Set(directoryRef.current.map((p) => p.id));
+    const missing = [...new Set(ids)].filter((id) => id && !known.has(id) && !triedMissing.current.has(id));
     if (missing.length === 0) return;
     missing.forEach((id) => triedMissing.current.add(id));
     void (async () => {
-      const { data, error } = await supabase
-        .from("users_directory")
-        .select("*")
-        .in("id", missing);
+      const { data, error } = await supabase.rpc("users_basic", { p_ids: missing });
       if (error || !data || data.length === 0) return;
       setDirectory((prev) => {
         const have = new Set(prev.map((p) => p.id));
@@ -433,18 +438,22 @@ export function FriendsProvider({ children }: { children: ReactNode }) {
             name: item.name,
             nameEn: item.name_en || item.name,
             handle: item.handle,
-            role: item.role,
-            roleEn: item.role_en,
+            role: item.role || "",
+            roleEn: item.role_en || "",
             status: item.status,
             lastSeenMinutes: 0,
-            lastSeenAt: item.last_seen_at ?? null,
+            lastSeenAt: null,
             avatarUrl: item.avatar_url ?? null,
             accent: item.accent || "teal",
           })) as Person[];
         return added.length ? [...prev, ...added] : prev;
       });
     })();
-  }, [relations, directory]);
+  }, []);
+
+  useEffect(() => {
+    ensureUsers([...relations.friends, ...relations.incoming, ...relations.outgoing, ...relations.blocked]);
+  }, [relations, directory, ensureUsers]);
 
   // كل عمليات الصداقة تمر من دالة وحدة بقاعدة البيانات (friend_action)
   const runAction = useCallback(
@@ -542,8 +551,9 @@ export function FriendsProvider({ children }: { children: ReactNode }) {
       refreshProfile,
       isOnline,
       refreshFriends,
+      ensureUsers,
     };
-  }, [hydrated, directory, profile, relations, byIds, relationOf, sendRequest, cancelRequest, acceptRequest, rejectRequest, removeFriend, blockUser, unblockUser, refreshProfile, isOnline, refreshFriends]);
+  }, [hydrated, directory, profile, relations, byIds, relationOf, sendRequest, cancelRequest, acceptRequest, rejectRequest, removeFriend, blockUser, unblockUser, refreshProfile, isOnline, refreshFriends, ensureUsers]);
 
   return <FriendsContext.Provider value={value}>{children}</FriendsContext.Provider>;
 }
