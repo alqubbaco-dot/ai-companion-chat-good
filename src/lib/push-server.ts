@@ -20,6 +20,7 @@ type PushInput = {
   body: string;
   url: string;
   tag: string;
+  icon?: string;
 };
 
 export type PushResult = { ok: true; sent: number; devices: number; errors: string[] } | { ok: false; error: string };
@@ -39,6 +40,11 @@ export const sendPushToFriend = createServerFn({ method: "POST" })
       // نسمح بروابط داخل التطبيق فقط
       url: url.startsWith("/") && !url.startsWith("//") ? url : "/",
       tag: clip(input?.tag, 80),
+      // صورة المتصل: نقبل فقط روابط صور الحسابات من تخزين Supabase
+      icon: (() => {
+        const icon = clip(input?.icon, 500);
+        return icon.startsWith("https://") && icon.includes("/storage/v1/object/public/avatars/") ? icon : undefined;
+      })(),
     };
   })
   .handler(async ({ data }): Promise<PushResult> => {
@@ -64,6 +70,7 @@ export const sendPushToFriend = createServerFn({ method: "POST" })
       body: data.body,
       url: data.url,
       tag: data.tag,
+      ...(data.icon ? { icon: data.icon } : {}),
     };
     const payload = JSON.stringify(message);
     if (vapidKey) webpush.setVapidDetails("mailto:noreply@ghabiy.app", VAPID_PUBLIC_KEY, vapidKey);
