@@ -4,7 +4,7 @@ import { Ban, ChevronDown, Flag, MoreVertical, Phone, Video } from "lucide-react
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useFriends } from "@/lib/friends-store";
 import { useCall } from "@/lib/call-store";
-import { notifyFriend } from "@/lib/push-client";
+import { notifyFriend, warmUpCallServer } from "@/lib/push-client";
 import { AudioBubble, ImageBubble, formatDuration } from "@/components/chat/MediaBubbles";
 import { useVoiceRecorder, type VoiceResult } from "@/lib/use-voice-recorder";
 import {
@@ -347,6 +347,11 @@ function PrivateChatPage() {
   const [dialog, setDialog] = useState<null | "report" | "block">(null);
   const [stickersOpen, setStickersOpen] = useState(false);
   const [stickersUnlocked, setStickersUnlocked] = useState(false);
+
+  // فتح المحادثة = احتمال مكالمة: نصحّي سيرفر الإشعارات حتى يرن صديقك فوراً
+  useEffect(() => {
+    warmUpCallServer();
+  }, [conversationId]);
 
   useEffect(() => {
     void getMyPoints().then((p) => setStickersUnlocked(Boolean(p?.unlocked?.includes(STICKERS_FEATURE))));

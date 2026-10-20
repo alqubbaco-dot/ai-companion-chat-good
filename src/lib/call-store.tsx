@@ -14,7 +14,7 @@ import { toast } from "sonner";
 import { supabase } from "./supabase";
 import { useFriends } from "./friends-store";
 import { getRingtone, ringtoneUrl } from "./ringtones";
-import { notifyFriend } from "./push-client";
+import { notifyFriend, warmUpCallServer } from "./push-client";
 import { saveCallLog, type CallStatus } from "./call-logs";
 import { getTurnIceServers } from "./turn-server";
 
@@ -284,7 +284,9 @@ export function CallProvider({ children }: { children: ReactNode }) {
 
   // نجهّز السيرفر الوسيط من يفتح التطبيق، حتى المكالمة تبدي بسرعة
   useEffect(() => {
-    if (myId) void ensureTurnServers(10_000);
+    if (!myId) return;
+    void ensureTurnServers(10_000);
+    warmUpCallServer();
   }, [myId]);
 
   // رجعنا للتطبيق من الخلفية: نجدد التذكرة والخط فوراً حتى توصل المكالمات ونگدر نتصل
@@ -294,6 +296,7 @@ export function CallProvider({ children }: { children: ReactNode }) {
       if (document.visibilityState !== "visible") return;
       ensureRealtimeConnected();
       void ensureFreshSession();
+      warmUpCallServer();
     };
     document.addEventListener("visibilitychange", onVisible);
     window.addEventListener("online", onVisible);

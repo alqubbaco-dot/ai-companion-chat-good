@@ -114,6 +114,23 @@ export const sendPushToFriend = createServerFn({ method: "POST" })
     return { ok: true, sent, devices: list.length, errors };
   });
 
+// ───────────── تسخين السيرفر قبل المكالمة ─────────────
+// السيرفر (Vercel) ينام إذا محد استعمله فترة، وأول طلب يتأخر ثواني حتى يصحى
+// ويجيب تذكرة Google من جديد. نصحّيه مسبقاً (من يفتح التطبيق أو المحادثة)
+// حتى لما يضغط المستخدم "اتصال" يطلع إشعار المكالمة فوراً.
+// ما يرجّع أي معلومات، بس يجهّز التذكرة بالذاكرة.
+export const warmUpPush = createServerFn({ method: "POST" }).handler(async (): Promise<{ ok: boolean }> => {
+  const env = (typeof process !== "undefined" ? process.env : {}) as Record<string, string | undefined>;
+  const sa = readServiceAccount(env);
+  if (!sa) return { ok: false };
+  try {
+    await getAccessToken(sa);
+    return { ok: true };
+  } catch {
+    return { ok: false };
+  }
+});
+
 // ───────────── Firebase Cloud Messaging (تطبيق الأندرويد) ─────────────
 
 type ServiceAccount = { client_email: string; private_key: string; project_id: string };

@@ -1,6 +1,17 @@
 import { supabase } from "./supabase";
 import { VAPID_PUBLIC_KEY } from "./push-config";
-import { sendPushToFriend, type PushKind } from "./push-server";
+import { sendPushToFriend, warmUpPush, type PushKind } from "./push-server";
+
+// يصحّي سيرفر الإشعارات مسبقاً حتى أول مكالمة ما تتأخر (مرة كل 3 دقايق بالأكثر)
+let lastWarmUp = 0;
+export function warmUpCallServer() {
+  const now = Date.now();
+  if (now - lastWarmUp < 3 * 60_000) return;
+  lastWarmUp = now;
+  warmUpPush().catch(() => {
+    lastWarmUp = 0;
+  });
+}
 
 // جهة المتصفح لإشعارات Push: تسجيل الجهاز + طلب إرسال إشعار لصديق
 
