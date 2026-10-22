@@ -93,7 +93,7 @@ export function AudioBubble({ path, duration, mine }: { path: string; duration?:
   };
 
   return (
-    <div className="flex w-56 items-center gap-2.5 py-1">
+    <div className="flex w-[min(14rem,60vw)] items-center gap-2.5 py-1">
       {url ? (
         <audio
           ref={audioRef}

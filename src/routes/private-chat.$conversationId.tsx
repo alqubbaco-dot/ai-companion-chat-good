@@ -657,7 +657,7 @@ function PrivateChatPage() {
   return (
     <div className="flex h-full min-h-0 w-full flex-col bg-paper">
       {/* شريط علوي مثل الواتساب: رجوع، الصورة والاسم، وزر الاتصال */}
-      <header className="flex shrink-0 items-center gap-3 border-b-2 border-line bg-cream px-3 py-2.5">
+      <header className="flex shrink-0 items-center gap-2 border-b-2 border-line bg-cream px-3 py-2.5">
         <Link
           to="/friends"
           className="grid size-9 shrink-0 place-items-center rounded-full text-xl hover:bg-ink/5"
@@ -675,8 +675,8 @@ function PrivateChatPage() {
           ) : null}
         </div>
         <div className="min-w-0 flex-1">
-          <p className="line-clamp-2 break-words font-display text-[15px] font-extrabold leading-tight">{title}</p>
-          <p className={`break-words text-[11px] leading-snug ${otherActivity || isOnline ? "text-emerald-600" : "text-muted-ink"}`}>
+          <p className="truncate font-display text-[15px] font-extrabold leading-tight" title={title}>{title}</p>
+          <p className={`truncate text-[11px] leading-snug ${otherActivity || isOnline ? "text-emerald-600" : "text-muted-ink"}`}>
             {otherActivity === "typing"
               ? "يكتب الآن…"
               : otherActivity === "recording"
@@ -749,7 +749,7 @@ function PrivateChatPage() {
           return (
             <div key={message.id} className={`flex ${mine ? "justify-start" : "justify-end"}`}>
               <div
-                className={`max-w-[80%] rounded-2xl text-sm shadow-sm ${
+                className={`max-w-[80%] overflow-hidden rounded-2xl text-sm shadow-sm ${
                   message.kind === "image" ? "p-1" : "px-3 py-1.5"
                 } ${
                   mine ? "rounded-ss-sm bg-emerald-100 text-emerald-950" : "rounded-se-sm border border-line bg-cream"
