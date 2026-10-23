@@ -74,8 +74,10 @@ function RoundButton({
 // شاشة المكالمة (صوت أو فيديو / صادرة / واردة / شغالة) فوق كل التطبيق
 export function CallOverlay() {
   const {
-    phase,
-    call,
+    phase: realPhase,
+    call: realCall,
+    preparing,
+    cancelPreparing,
     muted,
     seconds,
     endedReason,
@@ -94,6 +96,19 @@ export function CallOverlay() {
     switchCamera,
   } = useCall();
   const { directory } = useFriends();
+
+  // ضغط "رد" من شاشة الأندرويد والمكالمة بعدها ما وصلت: نعرض "جاري الربط" فوراً
+  const waiting = realPhase === "idle" && preparing !== null;
+  const phase = waiting ? "connecting" : realPhase;
+  const call = waiting
+    ? realCall ?? {
+        callId: preparing.callId,
+        peerId: preparing.peerId,
+        peerName: directory.find((p) => p.id === preparing.peerId)?.name || preparing.peerName || "صديق",
+        direction: "in" as const,
+        video: preparing.video,
+      }
+    : realCall;
   const peerAvatar = call ? directory.find((p) => p.id === call.peerId)?.avatarUrl : null;
 
   const visible = phase !== "idle" && call;
@@ -188,7 +203,7 @@ export function CallOverlay() {
                 onClick={toggleMute}
                 label={muted ? "مكتوم" : "كتم"} compact={compactControls}
                 tone={muted ? "white" : "glass"}
-                disabled={phase === "outgoing"}
+                disabled={phase === "outgoing" || waiting}
               >
                 {muted ? "🔇" : "🎙️"}
               </RoundButton>
@@ -211,7 +226,7 @@ export function CallOverlay() {
                   </RoundButton>
                 </>
               ) : null}
-              <RoundButton onClick={hangUp} label="إنهاء" tone="red" big compact={compactControls}>
+              <RoundButton onClick={waiting ? cancelPreparing : hangUp} label="إنهاء" tone="red" big compact={compactControls}>
                 <span className="rotate-[135deg]">📞</span>
               </RoundButton>
             </div>
