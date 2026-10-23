@@ -37,6 +37,12 @@ public class MainActivity extends Activity {
 
     static volatile boolean inForeground = false;
 
+    /** المستخدم رد على مكالمة والتلفون مقفول: نعرض شاشة المكالمة فوق القفل بدون بصمة */
+    static final String EXTRA_OVER_LOCK = "overLock";
+    private final android.os.Handler lockHandler = new android.os.Handler(android.os.Looper.getMainLooper());
+    private boolean overLock = false;
+    private boolean callActive = false;
+
     private static final int REQ_PERMISSIONS = 1;
     private static final int REQ_FILE = 2;
     private ValueCallback<Uri[]> fileCallback;
@@ -152,6 +158,48 @@ public class MainActivity extends Activity {
         } else {
             web.loadUrl(Config.BASE_URL + pathFrom(getIntent()));
         }
+        maybeShowOverLock(getIntent());
+    }
+
+    // ── شاشة المكالمة فوق قفل التلفون (مثل الواتساب) ──
+    private void maybeShowOverLock(Intent intent) {
+        if (intent == null || !intent.getBooleanExtra(EXTRA_OVER_LOCK, false)) return;
+        setOverLock(true);
+        // المكالمة ما بدت خلال 30 ثانية: نرجّع القفل
+        lockHandler.removeCallbacksAndMessages(null);
+        lockHandler.postDelayed(() -> {
+            if (!callActive) setOverLock(false);
+        }, 30_000);
+    }
+
+    private void setOverLock(boolean on) {
+        overLock = on;
+        if (Build.VERSION.SDK_INT >= 27) {
+            setShowWhenLocked(on);
+            setTurnScreenOn(on);
+        } else if (on) {
+            getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED
+                    | android.view.WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON);
+        } else {
+            getWindow().clearFlags(android.view.WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED
+                    | android.view.WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON);
+        }
+        if (on) {
+            getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        } else {
+            getWindow().clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        }
+    }
+
+    /** بداية ونهاية المكالمة: بعد ما تخلص، القفل يرجع ويحمي باقي التطبيق */
+    private void onCallActive(boolean active) {
+        callActive = active;
+        if (active) {
+            lockHandler.removeCallbacksAndMessages(null);
+        } else if (overLock) {
+            lockHandler.removeCallbacksAndMessages(null);
+            setOverLock(false);
+        }
     }
 
     @Override
@@ -167,6 +215,7 @@ public class MainActivity extends Activity {
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
         setIntent(intent);
+        maybeShowOverLock(intent);
         final String path = intent.getStringExtra("path");
         if (path == null || web == null) return;
         if (path.contains("call=")) {
@@ -343,7 +392,10 @@ public class MainActivity extends Activity {
         /** وضع المكالمة (true عند بدء الاتصال، false عند انتهائه) */
         @JavascriptInterface
         public void callAudio(boolean active) {
-            runOnUiThread(() -> CallAudio.setActive(MainActivity.this, active));
+            runOnUiThread(() -> {
+                CallAudio.setActive(MainActivity.this, active);
+                onCallActive(active);
+            });
         }
 
         /** السبيكر (true) أو سماعة الأذن (false) */
