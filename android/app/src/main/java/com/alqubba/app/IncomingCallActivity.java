@@ -233,24 +233,15 @@ public class IncomingCallActivity extends Activity {
     private void accept() {
         Notifier.cancel(this, tag);
         final String target = Notifier.acceptPath(path, name, video);
-        Runnable open = () -> {
-            Intent i = new Intent(this, MainActivity.class)
-                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP)
-                    .putExtra(Notifier.EXTRA_PATH, target);
-            startActivity(i);
-            finish();
-        };
+        // التلفون مقفول: نفتح المكالمة فوق القفل مباشرة بدون بصمة (مثل الواتساب)
         KeyguardManager km = (KeyguardManager) getSystemService(KEYGUARD_SERVICE);
-        if (Build.VERSION.SDK_INT >= 26 && km != null && km.isKeyguardLocked()) {
-            km.requestDismissKeyguard(this, new KeyguardManager.KeyguardDismissCallback() {
-                @Override
-                public void onDismissSucceeded() {
-                    open.run();
-                }
-            });
-        } else {
-            open.run();
-        }
+        boolean locked = km != null && km.isKeyguardLocked();
+        Intent i = new Intent(this, MainActivity.class)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP)
+                .putExtra(Notifier.EXTRA_PATH, target)
+                .putExtra(MainActivity.EXTRA_OVER_LOCK, locked);
+        startActivity(i);
+        finish();
     }
 
     private void decline() {
