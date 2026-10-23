@@ -167,10 +167,18 @@ public class MainActivity extends Activity {
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
         setIntent(intent);
-        String path = intent.getStringExtra("path");
-        if (path != null && web != null) {
-            web.loadUrl(Config.BASE_URL + path);
+        final String path = intent.getStringExtra("path");
+        if (path == null || web == null) return;
+        if (path.contains("call=")) {
+            // الصفحة مفتوحة أصلاً: نسلّمها المكالمة مباشرة بدل إعادة تحميل التطبيق كله (أسرع بكثير)
+            String js = "(function(){try{return !!(window.__qubbaOpen&&window.__qubbaOpen("
+                    + org.json.JSONObject.quote(path) + "));}catch(e){return false;}})()";
+            web.evaluateJavascript(js, result -> {
+                if (!"true".equals(result)) web.loadUrl(Config.BASE_URL + path);
+            });
+            return;
         }
+        web.loadUrl(Config.BASE_URL + path);
     }
 
     private String pathFrom(Intent intent) {
