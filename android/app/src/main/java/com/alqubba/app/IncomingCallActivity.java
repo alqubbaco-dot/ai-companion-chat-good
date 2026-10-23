@@ -39,6 +39,7 @@ public class IncomingCallActivity extends Activity {
     private String path;
     private boolean video;
     private String avatarUrl;
+    private String name;
     private final Handler handler = new Handler(Looper.getMainLooper());
 
     static boolean isShowing(String tag) {
@@ -88,6 +89,7 @@ public class IncomingCallActivity extends Activity {
         path = i.getStringExtra(Notifier.EXTRA_PATH);
         avatarUrl = i.getStringExtra(Notifier.EXTRA_AVATAR);
         video = i.getBooleanExtra(Notifier.EXTRA_VIDEO, false);
+        name = i.getStringExtra(Notifier.EXTRA_NAME);
     }
 
     private int dp(int v) {
@@ -230,8 +232,7 @@ public class IncomingCallActivity extends Activity {
 
     private void accept() {
         Notifier.cancel(this, tag);
-        final String target = (path != null ? path : "/friends")
-                + ((path != null && path.contains("?")) ? "&" : "?") + "autoaccept=1";
+        final String target = Notifier.acceptPath(path, name, video);
         Runnable open = () -> {
             Intent i = new Intent(this, MainActivity.class)
                     .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP)
