@@ -74,9 +74,37 @@ type CallValue = {
   hangUp: () => void;
   toggleMute: () => void;
   remoteAudioRef: RefObject<HTMLAudioElement | null>;
+  /** شاشة "جاري الربط" قبل ما توصل الدعوة (بعد الضغط على "رد" من الأندرويد) */
+  preparing: PreparingCall | null;
+  cancelPreparing: () => void;
 };
 
 const CallContext = createContext<CallValue | null>(null);
+
+/** المستخدم ضغط "رد" من شاشة الأندرويد وننتظر توصل الدعوة: نعرض شاشة "جاري الربط" فوراً */
+export type PreparingCall = { callId: string; peerId: string; peerName: string; video: boolean };
+
+/** نقرأ بيانات المكالمة من الرابط (?call=..&from=..&autoaccept=1&name=..&video=1) */
+function readCallParams(search: string) {
+  const params = new URLSearchParams(search);
+  const callId = params.get("call");
+  const from = params.get("from");
+  if (!callId || !from) return null;
+  return {
+    callId,
+    from,
+    autoAccept: params.get("autoaccept") === "1",
+    name: params.get("name") || "",
+    video: params.get("video") === "1",
+  };
+}
+
+function initialPreparing(): PreparingCall | null {
+  if (typeof window === "undefined") return null;
+  const p = readCallParams(window.location.search);
+  if (!p || !p.autoAccept) return null;
+  return { callId: p.callId, peerId: p.from, peerName: p.name, video: p.video };
+}
 
 export function useCall(): CallValue {
   const ctx = useContext(CallContext);
@@ -332,6 +360,9 @@ export function CallProvider({ children }: { children: ReactNode }) {
   const ringTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   // المستخدم ضغط "رد" من شاشة الأندرويد: نرد تلقائياً أول ما توصل الدعوة
   const autoAcceptRef = useRef<string | null>(null);
+  const [preparing, setPreparing] = useState<PreparingCall | null>(initialPreparing);
+  const preparingRef = useRef<PreparingCall | null>(preparing);
+  preparingRef.current = preparing;
   // سجل المكالمة: متى بدت، متى انردّت، وشنو صار بيها
   const startedAtRef = useRef<string>(new Date().toISOString());
   const answeredAtRef = useRef<number | null>(null);
@@ -443,6 +474,7 @@ export function CallProvider({ children }: { children: ReactNode }) {
       }
       peerChannelPeerRef.current = null;
       setMuted(false);
+      setPreparing(null);
       setEndedReason(reason);
       if (callRef.current) {
         updatePhase("ended");
@@ -782,6 +814,90 @@ export function CallProvider({ children }: { children: ReactNode }) {
     }
   }, [cameraOff]);
 
+  // ── فتح التطبيق من مكالمة (من الإشعار أو من زر "رد" بالأندرويد) ──
+  const handleOpenCall = useCallback(
+    (search: string) => {
+      if (!myId) return false;
+      const p = readCallParams(search);
+      if (!p || p.from === myId) return false;
+      if (p.autoAccept) {
+        autoAcceptRef.current = p.callId;
+        if (phaseRef.current === "idle") {
+          setPreparing({ callId: p.callId, peerId: p.from, peerName: p.name, video: p.video });
+        }
+      }
+      // نشيل بيانات المكالمة من الرابط حتى ما تنعاد
+      try {
+        const params = new URLSearchParams(window.location.search);
+        ["call", "from", "autoaccept", "name", "video"].forEach((k) => params.delete(k));
+        const rest = params.toString();
+        window.history.replaceState(window.history.state, "", window.location.pathname + (rest ? `?${rest}` : ""));
+      } catch {
+        /* */
+      }
+      void (async () => {
+        try {
+          await openPeerChannel(p.from);
+          await sendSignal({ type: "ready", callId: p.callId, from: myId });
+        } catch (err) {
+          console.warn("ready signal failed", err);
+        }
+      })();
+      return true;
+    },
+    [myId, openPeerChannel, sendSignal],
+  );
+  const handleOpenCallRef = useRef(handleOpenCall);
+  handleOpenCallRef.current = handleOpenCall;
+
+  // تطبيق الأندرويد يناديها بدل ما يعيد تحميل الصفحة كلها (أسرع بكثير)
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const w = window as unknown as { __qubbaOpen?: (path: string) => boolean };
+    w.__qubbaOpen = (path: string) => {
+      const q = path.indexOf("?");
+      return q >= 0 ? handleOpenCallRef.current(path.slice(q)) : false;
+    };
+    return () => {
+      delete w.__qubbaOpen;
+    };
+  }, []);
+
+  // بدت المكالمة فعلاً: نشيل شاشة الانتظار
+  useEffect(() => {
+    if (phase !== "idle") setPreparing(null);
+  }, [phase]);
+
+  // الدعوة ما وصلت خلال 20 ثانية: المتصل سكّر
+  useEffect(() => {
+    if (!preparing) return;
+    const timer = setTimeout(() => {
+      if (preparingRef.current?.callId === preparing.callId && phaseRef.current === "idle") {
+        autoAcceptRef.current = null;
+        setPreparing(null);
+        toast.error("تعذر ربط المكالمة، يمكن المتصل سكّر");
+      }
+    }, 20_000);
+    return () => clearTimeout(timer);
+  }, [preparing]);
+
+  const cancelPreparing = useCallback(() => {
+    const p = preparingRef.current;
+    if (!p) return;
+    autoAcceptRef.current = null;
+    setPreparing(null);
+    if (myId) {
+      void (async () => {
+        try {
+          await openPeerChannel(p.peerId);
+          await sendSignal({ type: "reject", callId: p.callId, from: myId, reason: "declined" });
+        } catch {
+          /* */
+        }
+      })();
+    }
+  }, [myId, openPeerChannel, sendSignal]);
+
   // ── الاستماع على قناتي للإشارات الواردة ──
   useEffect(() => {
     if (!myId) return;
@@ -829,7 +945,12 @@ export function CallProvider({ children }: { children: ReactNode }) {
         setCall(info);
         setSeconds(0);
         setEndedReason(null);
-        updatePhase("incoming");
+        if (autoAcceptRef.current === signal.callId) {
+          // رد تلقائي: ما نعرض شاشة الرنين، نبقى على "جاري الربط"
+          phaseRef.current = "incoming";
+        } else {
+          updatePhase("incoming");
+        }
         try {
           await openPeerChannel(signal.from);
         } catch (err) {
@@ -923,29 +1044,7 @@ export function CallProvider({ children }: { children: ReactNode }) {
       .subscribe((status) => {
         if (status !== "SUBSCRIBED") return;
         // فتح التطبيق من إشعار مكالمة؟ نبلغ المتصل حتى يعيد إرسال الدعوة
-        try {
-          const params = new URLSearchParams(window.location.search);
-          const callId = params.get("call");
-          const from = params.get("from");
-          if (callId && from && from !== myId) {
-            if (params.get("autoaccept") === "1") autoAcceptRef.current = callId;
-            params.delete("call");
-            params.delete("from");
-            params.delete("autoaccept");
-            const rest = params.toString();
-            window.history.replaceState(null, "", window.location.pathname + (rest ? `?${rest}` : ""));
-            void (async () => {
-              try {
-                await openPeerChannel(from);
-                await sendSignal({ type: "ready", callId, from: myId });
-              } catch (err) {
-                console.warn("ready signal failed", err);
-              }
-            })();
-          }
-        } catch (err) {
-          console.warn("ready signal failed", err);
-        }
+        handleOpenCallRef.current(window.location.search);
       });
 
     return () => {
@@ -993,6 +1092,8 @@ export function CallProvider({ children }: { children: ReactNode }) {
       cameraOff,
       toggleCamera,
       switchCamera,
+      preparing,
+      cancelPreparing,
     }),
     [
       phase,
@@ -1013,6 +1114,8 @@ export function CallProvider({ children }: { children: ReactNode }) {
       cameraOff,
       toggleCamera,
       switchCamera,
+      preparing,
+      cancelPreparing,
     ],
   );
 
