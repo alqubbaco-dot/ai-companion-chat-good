@@ -102,6 +102,21 @@ final class Notifier {
         }
     }
 
+    /** رابط الرد: نضيف اسم المتصل ونوع المكالمة حتى تطلع شاشة "جاري الربط" فوراً */
+    static String acceptPath(String url, String name, boolean video) {
+        String base = url != null ? url : "/friends";
+        StringBuilder sb = new StringBuilder(base).append(base.contains("?") ? "&" : "?").append("autoaccept=1");
+        if (video) sb.append("&video=1");
+        if (name != null && !name.trim().isEmpty()) {
+            try {
+                sb.append("&name=").append(java.net.URLEncoder.encode(name.trim(), "UTF-8"));
+            } catch (Exception ignored) {
+                // بدون اسم: الصفحة تجيبه من قائمة الأصدقاء
+            }
+        }
+        return sb.toString();
+    }
+
     static void showIncomingCall(Context c, Map<String, String> d) {
         ensureChannels(c);
         String url = d.get("url") != null ? d.get("url") : "/friends";
@@ -127,7 +142,7 @@ final class Notifier {
 
         Intent accept = new Intent(c, MainActivity.class)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP)
-                .putExtra(EXTRA_PATH, url + (url.contains("?") ? "&" : "?") + "autoaccept=1");
+                .putExtra(EXTRA_PATH, acceptPath(url, name, video));
         PendingIntent acceptPi = PendingIntent.getActivity(c, id + 1, accept, piFlags());
 
         Intent decline = new Intent(c, DeclineReceiver.class)
